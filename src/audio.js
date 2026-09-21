@@ -60,10 +60,11 @@
   function playLaser(){if(ensure())tone(1250,.07,'square',.065,0,sfxBus,420);}
   function playExplosion(){if(ensure()){noise(.20,.15,750);tone(190,.20,'sawtooth',.065,0,sfxBus,55);}}
   function playHit(){if(ensure()){tone(120,.16,'square',.11,0,sfxBus,65);noise(.12,.09,520);}}
+  function playArmorPing(){if(ensure()){tone(1760,.055,'square',.045,0,sfxBus,1180);tone(2380,.045,'sine',.025,.025,sfxBus,1650);}}
   function playBoss(){if(!ensure())return;[220,277,330,415].forEach((f,i)=>tone(f,.18,'sawtooth',.045,i*.11,sfxBus));}
   function playStageClear(){if(!ensure())return;[523,659,784,1047].forEach((f,i)=>tone(f,.16,'square',.05,i*.11,sfxBus));}
   function playGameOver(){if(ensure())[330,247,196,147].forEach((f,i)=>tone(f,.22,'square',.07,i*.16,sfxBus,f*.82));}
   function toggleMute(){if(!ensure())return false;muted=!muted;master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setValueAtTime(muted?0:.68,ctx.currentTime);return muted;}
   function isMuted(){return muted;} function supported(){return !!AudioCtx;}
-  window.PolygonStrikeAudio={start,playLaser,playExplosion,playHit,playBoss,playStageClear,playGameOver,toggleMute,isMuted,supported};
+  window.PolygonStrikeAudio={start,playLaser,playExplosion,playHit,playArmorPing,playBoss,playStageClear,playGameOver,toggleMute,isMuted,supported};
 })();
