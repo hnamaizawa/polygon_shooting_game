@@ -34,10 +34,10 @@
   });
 
   const STAGES = Object.freeze([
-    Object.freeze({ number:1, name:'EARTH ORBIT', backdrop:'earth', speedMultiplier:1.00, spawnBase:0.92, groundChance:0.22, bossHp:40 }),
-    Object.freeze({ number:2, name:'DEEP SPACE', backdrop:'space', speedMultiplier:1.10, spawnBase:0.82, groundChance:0.26, bossHp:55 }),
-    Object.freeze({ number:3, name:'ENEMY FLAGSHIP', backdrop:'carrier', speedMultiplier:1.20, spawnBase:0.72, groundChance:0.34, bossHp:70 }),
-    Object.freeze({ number:4, name:'FLAGSHIP CORE', backdrop:'interior', speedMultiplier:1.32, spawnBase:0.62, groundChance:0.40, bossHp:90 })
+    Object.freeze({ number:1, name:'EARTH ORBIT', backdrop:'earth', speedMultiplier:1.00, spawnBase:0.92, groundChance:0.22, armorChance:0.05, bossHp:40 }),
+    Object.freeze({ number:2, name:'DEEP SPACE', backdrop:'space', speedMultiplier:1.10, spawnBase:0.82, groundChance:0.26, armorChance:0.07, bossHp:55 }),
+    Object.freeze({ number:3, name:'ENEMY FLAGSHIP', backdrop:'carrier', speedMultiplier:1.20, spawnBase:0.72, groundChance:0.34, armorChance:0.09, bossHp:70 }),
+    Object.freeze({ number:4, name:'FLAGSHIP CORE', backdrop:'interior', speedMultiplier:1.32, spawnBase:0.62, groundChance:0.40, armorChance:0.12, bossHp:90 })
   ]);
 
   function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -170,6 +170,34 @@
     return { ...enemy, y: CONFIG.groundPlaneY, z: enemy.z - enemy.speed * dt };
   }
 
+  // Indestructible rotating armor plate: an original obstacle archetype.
+  function makeArmorPlate(id, stageNumber = 1, rng = Math.random) {
+    if (typeof stageNumber === 'function') { rng = stageNumber; stageNumber = 1; }
+    const stage = stageConfig(stageNumber);
+    return {
+      id,
+      kind: 'armorPlate',
+      x: rand(-7.4, 7.4, rng),
+      y: CONFIG.flightPlaneY,
+      z: CONFIG.enemySpawnZ,
+      speed: rand(9.0, 12.0, rng) * stage.speedMultiplier,
+      angle: rand(0, Math.PI * 2, rng),
+      spin: rand(2.2, 4.1, rng) * (rng() > 0.5 ? 1 : -1),
+      indestructible: true,
+      alive: true,
+      stage: stage.number
+    };
+  }
+
+  function moveArmorPlate(plate, dt) {
+    return {
+      ...plate,
+      y: CONFIG.flightPlaneY,
+      z: plate.z - plate.speed * dt,
+      angle: plate.angle + plate.spin * dt
+    };
+  }
+
   function makeBoss(stageNumber = 1) {
     const stage = stageConfig(stageNumber);
     return {
@@ -200,6 +228,6 @@
     VERSION, CONFIG, STAGES, clamp, rand, stageConfig, stagePhase, stageRemaining,
     project3D, projectChase3D, movePlayer, spheresHit, planarHit,
     scoreForEnemy, nextEnemySpawn, makeEnemy, moveEnemy,
-    makeGroundEnemy, moveGroundEnemy, makeBoss, moveBoss
+    makeGroundEnemy, moveGroundEnemy, makeArmorPlate, moveArmorPlate, makeBoss, moveBoss
   };
 });
