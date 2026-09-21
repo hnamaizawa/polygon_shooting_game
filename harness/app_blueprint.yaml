@@ -1,0 +1,11 @@
+project: polygon-strike
+version: 0.1.0
+non_negotiable_invariants:
+  - "Browser-only prototype: no backend required"
+  - "Player movement must remain inside the visible play field"
+  - "Space/J fires forward lasers with cooldown"
+  - "Enemy collision can reduce player lives"
+  - "Destroying enemies increases score"
+  - "Game over occurs when lives reach zero"
+  - "Visual language remains original retro low-poly/wireframe; do not copy proprietary game assets"
+  - "Core math remains independently testable with Node.js"
