@@ -5,10 +5,11 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.3.0';
+  const VERSION = '0.3.1';
   const CONFIG = Object.freeze({
     worldHalfWidth: 9.2,
     worldHalfHeight: 6.0,
+    flightPlaneY: 3.25,
     playerZ: 9.0,
     playerMinZ: 7.0,
     playerMaxZ: 26.0,
@@ -22,8 +23,9 @@
     fireCooldown: 0.16,
     collisionXY: 1.35,
     collisionZ: 3.2,
-    cameraPitchDeg: 24,
-    cameraFocal: 500
+    cameraPitchDeg: 30,
+    cameraFocal: 500,
+    cameraBackOffset: 4.0
   });
 
   function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -34,10 +36,16 @@
     return { x: viewport.cx + point.x * focal / z, y: viewport.cy + point.y * focal / z, scale: focal / z, depth: z };
   }
 
-  function projectChase3D(point, viewport, focal = CONFIG.cameraFocal, pitch = CONFIG.cameraPitchDeg * Math.PI / 180) {
+  function projectChase3D(
+    point,
+    viewport,
+    focal = CONFIG.cameraFocal,
+    pitch = CONFIG.cameraPitchDeg * Math.PI / 180,
+    backOffset = CONFIG.cameraBackOffset
+  ) {
     const cos = Math.cos(pitch), sin = Math.sin(pitch);
     const yCam = point.y * cos - point.z * sin;
-    const zCam = point.y * sin + point.z * cos;
+    const zCam = point.y * sin + point.z * cos + backOffset;
     const z = Math.max(0.2, zCam);
     return { x: viewport.cx + point.x * focal / z, y: viewport.cy + yCam * focal / z, scale: focal / z, depth: zCam };
   }
@@ -52,6 +60,7 @@
     return {
       ...player,
       x: clamp(x, -CONFIG.worldHalfWidth, CONFIG.worldHalfWidth),
+      y: CONFIG.flightPlaneY,
       z: clamp(z, CONFIG.playerMinZ, CONFIG.playerMaxZ)
     };
   }
@@ -68,9 +77,12 @@
     return {
       id,
       kind: rng() > 0.72 ? 'dart' : 'fighter',
-      x: rand(-7.8, 7.8, rng), y: rand(-4.3, 3.0, rng), z: CONFIG.enemySpawnZ,
+      x: rand(-7.8, 7.8, rng),
+      y: CONFIG.flightPlaneY,
+      z: CONFIG.enemySpawnZ,
       speed: rand(CONFIG.enemySpeedMin, CONFIG.enemySpeedMax, rng),
-      phase: rand(0, Math.PI * 2, rng), alive: true
+      phase: rand(0, Math.PI * 2, rng),
+      alive: true
     };
   }
 

@@ -10,8 +10,25 @@
   let step = 0;
   let muted = false;
 
-  const melody = [69,72,76,72,67,71,74,71,65,69,72,69,67,71,76,74];
-  const bass = [45,45,43,43,41,41,43,43,38,38,41,41,43,43,40,40];
+  // Original 32-step hook: bright, compact and intentionally arcade-like.
+  const melody = [
+    69,72,76,81,79,76,72,74,
+    76,79,83,79,76,74,72,69,
+    69,72,76,81,84,81,79,76,
+    74,76,79,83,81,79,76,72
+  ];
+  const harmony = [
+    64,64,67,67,65,65,67,67,
+    64,64,67,67,65,65,64,64,
+    64,64,67,67,69,69,67,67,
+    65,65,67,67,64,64,62,64
+  ];
+  const bass = [
+    45,45,45,45,41,41,43,43,
+    45,45,45,45,41,41,40,40,
+    45,45,45,45,48,48,43,43,
+    41,41,43,43,40,40,45,45
+  ];
 
   function midi(n) { return 440 * Math.pow(2, (n - 69) / 12); }
 
@@ -22,9 +39,9 @@
       master = ctx.createGain();
       bgmBus = ctx.createGain();
       sfxBus = ctx.createGain();
-      master.gain.value = 0.58;
-      bgmBus.gain.value = 0.22;
-      sfxBus.gain.value = 0.52;
+      master.gain.value = 0.68;
+      bgmBus.gain.value = 0.34;
+      sfxBus.gain.value = 0.50;
       bgmBus.connect(master);
       sfxBus.connect(master);
       master.connect(ctx.destination);
@@ -70,18 +87,21 @@
 
   function scheduleBgmStep() {
     if (!ctx) return;
-    const m = melody[step % melody.length];
-    const b = bass[step % bass.length];
-    tone(midi(m), .13, 'square', .045, .01, bgmBus);
-    if (step % 2 === 0) tone(midi(b), .24, 'triangle', .055, .01, bgmBus);
-    if (step % 4 === 2) tone(midi(m - 12), .08, 'square', .022, .07, bgmBus);
+    const i = step % melody.length;
+    const m = melody[i];
+    const h = harmony[i];
+    const b = bass[i];
+    tone(midi(m), .14, 'square', .060, .005, bgmBus);
+    if (i % 2 === 0) tone(midi(h), .16, 'triangle', .030, .018, bgmBus);
+    if (i % 2 === 0) tone(midi(b), .27, 'triangle', .065, .005, bgmBus);
+    if (i % 4 === 3) tone(midi(m + 12), .07, 'square', .024, .075, bgmBus);
     step = (step + 1) % melody.length;
   }
 
   function startBgm() {
     if (!ensure() || bgmTimer) return;
     scheduleBgmStep();
-    bgmTimer = setInterval(scheduleBgmStep, 150);
+    bgmTimer = setInterval(scheduleBgmStep, 145);
   }
 
   function start() {
@@ -97,34 +117,16 @@
     tone(660,.08,'square',.05,.09,sfxBus);
     tone(880,.14,'square',.055,.18,sfxBus);
   }
-
-  function playLaser() {
-    if (!ensure()) return;
-    tone(1250,.07,'square',.065,0,sfxBus,420);
-  }
-
-  function playExplosion() {
-    if (!ensure()) return;
-    noise(.20,.15,750);
-    tone(190,.20,'sawtooth',.065,0,sfxBus,55);
-  }
-
-  function playHit() {
-    if (!ensure()) return;
-    tone(120,.16,'square',.11,0,sfxBus,65);
-    noise(.12,.09,520);
-  }
-
-  function playGameOver() {
-    if (!ensure()) return;
-    [330,247,196,147].forEach((f,i)=>tone(f,.22,'square',.07,i*.16,sfxBus,f*.82));
-  }
+  function playLaser() { if (ensure()) tone(1250,.07,'square',.065,0,sfxBus,420); }
+  function playExplosion() { if (ensure()) { noise(.20,.15,750); tone(190,.20,'sawtooth',.065,0,sfxBus,55); } }
+  function playHit() { if (ensure()) { tone(120,.16,'square',.11,0,sfxBus,65); noise(.12,.09,520); } }
+  function playGameOver() { if (ensure()) [330,247,196,147].forEach((f,i)=>tone(f,.22,'square',.07,i*.16,sfxBus,f*.82)); }
 
   function toggleMute() {
     if (!ensure()) return false;
     muted = !muted;
     master.gain.cancelScheduledValues(ctx.currentTime);
-    master.gain.setValueAtTime(muted ? 0 : .58, ctx.currentTime);
+    master.gain.setValueAtTime(muted ? 0 : .68, ctx.currentTime);
     return muted;
   }
 
