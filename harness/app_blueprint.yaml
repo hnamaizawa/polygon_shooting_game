@@ -1,8 +1,10 @@
 project: polygon-strike
-version: 0.2.0
+version: 0.3.0
 non_negotiable_invariants:
   - "Browser-only prototype: no backend required"
-  - "Player movement must remain inside the visible play field"
+  - "Left/right input moves the craft laterally within the visible play field"
+  - "Up/W means forward movement by increasing world Z; Down/S means backward movement by decreasing world Z; these inputs must not move the craft vertically on screen"
+  - "Player forward/backward movement is clamped to configured near/far Z bounds"
   - "Space/J fires forward lasers with cooldown"
   - "Enemy collision can reduce player lives"
   - "Destroying enemies increases score"
@@ -11,7 +13,9 @@ non_negotiable_invariants:
   - "Player and enemy craft use filled low-poly surfaces with original procedural affine texture mapping; wireframe is not the primary craft rendering"
   - "Craft textures retain a metallic panel and reflected-highlight visual treatment"
   - "Gameplay background includes an original large capital-ship hull/deck structure to provide scale and depth"
-  - "Craft silhouettes may evoke 1980s polygon shooters but must not copy proprietary models, textures, UI assets, or other protected game assets"
+  - "Craft silhouettes may evoke 1980s polygon shooters but must not copy proprietary models, textures, UI assets, music, sound effects, or other protected game assets"
+  - "BGM and sound effects are original procedural Web Audio synthesis and require no external audio assets"
+  - "M toggles game audio mute state"
   - "Core math remains independently testable with Node.js"
   - "check_harness.cmd must provide baseline validation on Windows even when Node.js is not installed"
   - "When Node.js is unavailable but Edge or Chrome is installed, check_harness.cmd must execute browser-based JavaScript core tests instead of warning-only fallback"
