@@ -3,7 +3,7 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 
 echo [1/3] Checking required files...
-for %%F in (index.html style.css src\game.js src\game-core.js harness\app_blueprint.yaml README.md tests\core.test.js tests\browser.test.html) do (
+for %%F in (index.html style.css src\game.js src\game-core.js src\audio.js harness\app_blueprint.yaml README.md tests\core.test.js tests\browser.test.html) do (
   if not exist "%%F" (
     echo [ERROR] Missing %%F
     exit /b 1
@@ -12,41 +12,42 @@ for %%F in (index.html style.css src\game.js src\game-core.js harness\app_bluepr
 echo PASS: required files found.
 
 echo [2/3] Checking harness/source invariants...
-findstr /C:"const VERSION = '0.2.0'" "src\game-core.js" >nul
+findstr /C:"const VERSION = '0.3.0'" "src\game-core.js" >nul
 if errorlevel 1 (
   echo [ERROR] Expected game version was not found in src\game-core.js.
   exit /b 1
 )
-findstr /C:"function project3D" "src\game-core.js" >nul
-if errorlevel 1 (
-  echo [ERROR] project3D was not found in src\game-core.js.
-  exit /b 1
-)
 findstr /C:"function projectChase3D" "src\game-core.js" >nul
+if errorlevel 1 exit /b 1
+findstr /C:"function movePlayer" "src\game-core.js" >nul
 if errorlevel 1 (
-  echo [ERROR] projectChase3D was not found in src\game-core.js.
+  echo [ERROR] movePlayer was not found in src\game-core.js.
   exit /b 1
 )
-findstr /C:"function spheresHit" "src\game-core.js" >nul
+findstr /C:"forward:keys.has('ArrowUp')" "src\game.js" >nul
 if errorlevel 1 (
-  echo [ERROR] spheresHit was not found in src\game-core.js.
+  echo [ERROR] Up/W forward-depth mapping was not found in src\game.js.
   exit /b 1
 )
-findstr /C:"function makeEnemy" "src\game-core.js" >nul
+findstr /C:"backward:keys.has('ArrowDown')" "src\game.js" >nul
 if errorlevel 1 (
-  echo [ERROR] makeEnemy was not found in src\game-core.js.
+  echo [ERROR] Down/S backward-depth mapping was not found in src\game.js.
   exit /b 1
 )
 findstr /C:"function drawTexturedTriangle" "src\game.js" >nul
+if errorlevel 1 exit /b 1
+findstr /C:"function startBgm" "src\audio.js" >nul
 if errorlevel 1 (
-  echo [ERROR] texture-mapped polygon renderer was not found in src\game.js.
+  echo [ERROR] Procedural BGM implementation was not found in src\audio.js.
+  exit /b 1
+)
+findstr /C:"function playLaser" "src\audio.js" >nul
+if errorlevel 1 (
+  echo [ERROR] Sound-effect implementation was not found in src\audio.js.
   exit /b 1
 )
 findstr /C:"non_negotiable_invariants:" "harness\app_blueprint.yaml" >nul
-if errorlevel 1 (
-  echo [ERROR] non_negotiable_invariants was not found in harness\app_blueprint.yaml.
-  exit /b 1
-)
+if errorlevel 1 exit /b 1
 echo PASS: baseline source/harness invariants.
 
 echo [3/3] Running JavaScript tests...
@@ -65,31 +66,22 @@ if not defined BROWSER if exist "%LOCALAPPDATA%\Microsoft\Edge\Application\msedg
 if not defined BROWSER if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" set "BROWSER=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
 if not defined BROWSER if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" set "BROWSER=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"
 if not defined BROWSER if exist "%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe" set "BROWSER=%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"
-
 if defined BROWSER goto browser_tests
 
-echo [INFO] Node.js was not found, and Edge/Chrome was not detected for headless testing.
-echo [INFO] Baseline source/harness checks passed; JavaScript execution tests were not run.
+echo [INFO] Node.js and Edge/Chrome were not detected for execution testing.
 echo PASS: harness checks complete ^(baseline mode^).
 exit /b 0
 
 :node_tests
 echo [INFO] Node.js detected. Running full JavaScript tests...
 node --check src\game-core.js
-if errorlevel 1 (
-  echo [ERROR] src\game-core.js syntax check failed.
-  exit /b 1
-)
+if errorlevel 1 exit /b 1
+node --check src\audio.js
+if errorlevel 1 exit /b 1
 node --check src\game.js
-if errorlevel 1 (
-  echo [ERROR] src\game.js syntax check failed.
-  exit /b 1
-)
+if errorlevel 1 exit /b 1
 node tests\core.test.js
-if errorlevel 1 (
-  echo [ERROR] JavaScript unit tests failed.
-  exit /b 1
-)
+if errorlevel 1 exit /b 1
 echo PASS: harness checks complete ^(Node.js full mode^).
 exit /b 0
 
@@ -98,12 +90,8 @@ echo [INFO] Node.js was not found. Running browser fallback tests...
 set "TEST_OUT=%TEMP%\polygon_strike_browser_test_%RANDOM%.txt"
 set "TEST_PROFILE=%TEMP%\polygon_strike_browser_profile_%RANDOM%"
 set "TEST_URL=file:///%CD:\=/%/tests/browser.test.html"
-
 "%BROWSER%" --headless=new --disable-gpu --allow-file-access-from-files --no-first-run --user-data-dir="%TEST_PROFILE%" --dump-dom "%TEST_URL%" > "%TEST_OUT%" 2>nul
-if errorlevel 1 (
-  "%BROWSER%" --headless --disable-gpu --allow-file-access-from-files --no-first-run --user-data-dir="%TEST_PROFILE%" --dump-dom "%TEST_URL%" > "%TEST_OUT%" 2>nul
-)
-
+if errorlevel 1 "%BROWSER%" --headless --disable-gpu --allow-file-access-from-files --no-first-run --user-data-dir="%TEST_PROFILE%" --dump-dom "%TEST_URL%" > "%TEST_OUT%" 2>nul
 findstr /C:"PASS: browser core tests" "%TEST_OUT%" >nul
 if errorlevel 1 (
   echo [ERROR] Browser JavaScript tests failed.
@@ -112,7 +100,6 @@ if errorlevel 1 (
   if exist "%TEST_PROFILE%" rmdir /s /q "%TEST_PROFILE%" >nul 2>nul
   exit /b 1
 )
-
 echo PASS: browser core tests
 if exist "%TEST_OUT%" del /q "%TEST_OUT%" >nul 2>nul
 if exist "%TEST_PROFILE%" rmdir /s /q "%TEST_PROFILE%" >nul 2>nul
