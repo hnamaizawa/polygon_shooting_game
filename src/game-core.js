@@ -5,11 +5,15 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.2.0';
+  const VERSION = '0.3.0';
   const CONFIG = Object.freeze({
     worldHalfWidth: 9.2,
     worldHalfHeight: 6.0,
     playerZ: 9.0,
+    playerMinZ: 7.0,
+    playerMaxZ: 26.0,
+    playerMoveSpeedX: 8.8,
+    playerMoveSpeedZ: 14.0,
     enemySpawnZ: 82,
     enemyDespawnZ: 2.0,
     enemySpeedMin: 8,
@@ -27,25 +31,28 @@
 
   function project3D(point, viewport, focal = 520) {
     const z = Math.max(0.2, point.z);
-    return {
-      x: viewport.cx + point.x * focal / z,
-      y: viewport.cy + point.y * focal / z,
-      scale: focal / z,
-      depth: z
-    };
+    return { x: viewport.cx + point.x * focal / z, y: viewport.cy + point.y * focal / z, scale: focal / z, depth: z };
   }
 
   function projectChase3D(point, viewport, focal = CONFIG.cameraFocal, pitch = CONFIG.cameraPitchDeg * Math.PI / 180) {
-    const cos = Math.cos(pitch);
-    const sin = Math.sin(pitch);
+    const cos = Math.cos(pitch), sin = Math.sin(pitch);
     const yCam = point.y * cos - point.z * sin;
     const zCam = point.y * sin + point.z * cos;
     const z = Math.max(0.2, zCam);
+    return { x: viewport.cx + point.x * focal / z, y: viewport.cy + yCam * focal / z, scale: focal / z, depth: zCam };
+  }
+
+  function movePlayer(player, input, dt) {
+    let x = player.x;
+    let z = player.z;
+    if (input.left) x -= CONFIG.playerMoveSpeedX * dt;
+    if (input.right) x += CONFIG.playerMoveSpeedX * dt;
+    if (input.forward) z += CONFIG.playerMoveSpeedZ * dt;
+    if (input.backward) z -= CONFIG.playerMoveSpeedZ * dt;
     return {
-      x: viewport.cx + point.x * focal / z,
-      y: viewport.cy + yCam * focal / z,
-      scale: focal / z,
-      depth: zCam
+      ...player,
+      x: clamp(x, -CONFIG.worldHalfWidth, CONFIG.worldHalfWidth),
+      z: clamp(z, CONFIG.playerMinZ, CONFIG.playerMaxZ)
     };
   }
 
@@ -61,17 +68,14 @@
     return {
       id,
       kind: rng() > 0.72 ? 'dart' : 'fighter',
-      x: rand(-7.8, 7.8, rng),
-      y: rand(-4.3, 3.0, rng),
-      z: CONFIG.enemySpawnZ,
+      x: rand(-7.8, 7.8, rng), y: rand(-4.3, 3.0, rng), z: CONFIG.enemySpawnZ,
       speed: rand(CONFIG.enemySpeedMin, CONFIG.enemySpeedMax, rng),
-      phase: rand(0, Math.PI * 2, rng),
-      alive: true
+      phase: rand(0, Math.PI * 2, rng), alive: true
     };
   }
 
   return {
-    VERSION, CONFIG, clamp, rand, project3D, projectChase3D,
+    VERSION, CONFIG, clamp, rand, project3D, projectChase3D, movePlayer,
     spheresHit, scoreForEnemy, nextEnemySpawn, makeEnemy
   };
 });
