@@ -18,8 +18,8 @@
     fireCooldown: 0.16,
     collisionXY: 1.35,
     collisionZ: 3.2,
-    cameraPitchDeg: 15,
-    cameraFocal: 520
+    cameraPitchDeg: 24,
+    cameraFocal: 500
   });
 
   function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
