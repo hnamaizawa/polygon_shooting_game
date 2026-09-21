@@ -1,20 +1,22 @@
 project: polygon-strike
-version: 0.3.0
+version: 0.3.1
 non_negotiable_invariants:
   - "Browser-only prototype: no backend required"
   - "Left/right input moves the craft laterally within the visible play field"
   - "Up/W means forward movement by increasing world Z; Down/S means backward movement by decreasing world Z; these inputs must not move the craft vertically on screen"
   - "Player forward/backward movement is clamped to configured near/far Z bounds"
+  - "Player and enemies share one fixed flight-plane Y coordinate, preserving a 2D-shooter-like horizontal plane while depth is represented by Z"
   - "Space/J fires forward lasers with cooldown"
   - "Enemy collision can reduce player lives"
   - "Destroying enemies increases score"
   - "Game over occurs when lives reach zero"
-  - "Primary gameplay camera is a high elevated rear chase view pitched downward toward the forward flight field"
+  - "Primary gameplay camera is pulled farther behind the player and uses a stronger elevated rear chase angle"
   - "Player and enemy craft use filled low-poly surfaces with original procedural affine texture mapping; wireframe is not the primary craft rendering"
-  - "Craft textures retain a metallic panel and reflected-highlight visual treatment"
+  - "Player, enemy, and capital-ship surfaces use strong glossy metallic highlights and panel detail"
   - "Gameplay background includes an original large capital-ship hull/deck structure to provide scale and depth"
   - "Craft silhouettes may evoke 1980s polygon shooters but must not copy proprietary models, textures, UI assets, music, sound effects, or other protected game assets"
   - "BGM and sound effects are original procedural Web Audio synthesis and require no external audio assets"
+  - "BGM remains clearly audible relative to SFX and uses an original catchy repeating melodic hook"
   - "M toggles game audio mute state"
   - "Core math remains independently testable with Node.js"
   - "check_harness.cmd must provide baseline validation on Windows even when Node.js is not installed"
