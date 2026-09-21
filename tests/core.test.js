@@ -1,13 +1,15 @@
 const assert = require('assert');
 const C = require('../src/game-core.js');
 
-assert.strictEqual(C.VERSION, '0.5.0');
+assert.strictEqual(C.VERSION, '0.5.1');
 assert.strictEqual(C.CONFIG.stageCount, 4);
 assert.strictEqual(C.CONFIG.stageDurationSec, 60);
 assert.strictEqual(C.CONFIG.bossIntroSec, 50);
 assert.strictEqual(C.CONFIG.defaultLives, 3);
 assert.ok(C.CONFIG.playerBeamRange > 80);
 assert.ok(C.CONFIG.playerBeamDamageInterval > 0);
+assert.ok(C.CONFIG.playerBeamChargeSec > 1);
+assert.ok(C.CONFIG.playerBeamActiveSec > .5);
 assert.deepStrictEqual(C.STAGES.map(s=>s.backdrop), ['earthSurface','space','carrier','interior']);
 assert.strictEqual(C.STAGES[0].name, 'EARTH SURFACE');
 assert.ok(C.STAGES[3].speedMultiplier > C.STAGES[0].speedMultiplier);
@@ -59,6 +61,24 @@ const armorMoved=C.moveArmorPlate(armor,.25);assert.ok(armorMoved.z<armor.z);ass
 const boss=C.makeBoss(4);assert.strictEqual(boss.weapon,'beam');assert.ok(boss.hp>C.makeBoss(1).hp);
 const bullet=C.makeEnemyBullet({x:5,y:C.CONFIG.flightPlaneY,z:60},{x:0,y:C.CONFIG.flightPlaneY,z:10},2);
 assert.ok(bullet.vz<0);assert.ok(C.moveEnemyBullet(bullet,.5).z<bullet.z);
+
+
+let playerBeam={charge:0,active:0};
+playerBeam=C.updatePlayerBeamCharge(playerBeam,true,C.CONFIG.playerBeamChargeSec-.05);
+assert.strictEqual(playerBeam.active,0,'player beam must not fire before full charge');
+playerBeam=C.updatePlayerBeamCharge(playerBeam,true,.06);
+assert.ok(playerBeam.active>0&&playerBeam.justFired,'full charge must start a timed beam');
+const activeBefore=playerBeam.active;
+playerBeam=C.updatePlayerBeamCharge(playerBeam,false,.2);
+assert.ok(playerBeam.active<activeBefore,'active beam duration must count down');
+let partial=C.updatePlayerBeamCharge({charge:.8,active:0},false,.5);
+assert.ok(partial.charge<.8&&partial.charge>0,'released partial charge must decay gradually');
+
+assert.ok(C.secretEncounter(1,24),'stage 1 must have a secret encounter window');
+assert.ok(!C.secretEncounter(1,10),'secret must stay hidden outside its window');
+const secret=C.makeSecretCharacter(2);
+assert.strictEqual(secret.kind,'goldenScout');assert.ok(secret.hidden);
+const secretMoved=C.moveSecretCharacter(secret,1);assert.ok(secretMoved.age>secret.age);assert.ok(!secretMoved.hidden);
 
 const m0=C.mapSegment(7,1),m0Again=C.mapSegment(7,1),m1=C.mapSegment(8,1);
 assert.deepStrictEqual(m0,m0Again,'map segments must be deterministic');
