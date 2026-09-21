@@ -7,6 +7,7 @@ non_negotiable_invariants:
   - "Player and airborne enemies share the configured flightPlaneY"
   - "Ground enemies exist on groundPlaneY and can be destroyed by player laser fire using X/Z planar targeting"
   - "Air enemies use multiple movement patterns and stage-scaled speed"
+  - "Campaign includes original indestructible rotating armor-plate obstacles that absorb player laser hits without being destroyed"
   - "Campaign contains exactly four stages with approximately five minutes per stage"
   - "Each stage enters a boss phase near the end and requires defeating a stage boss to advance"
   - "Stage backdrops progress through Earth orbit, deep space, enemy flagship exterior, and enemy flagship interior"
