@@ -12,38 +12,47 @@ for %%F in (index.html style.css src\game.js src\game-core.js src\audio.js harne
 echo PASS: required files found.
 
 echo [2/3] Checking harness/source invariants...
-findstr /C:"const VERSION = '0.3.0'" "src\game-core.js" >nul
+findstr /C:"const VERSION = '0.3.1'" "src\game-core.js" >nul
 if errorlevel 1 (
   echo [ERROR] Expected game version was not found in src\game-core.js.
   exit /b 1
 )
-findstr /C:"function projectChase3D" "src\game-core.js" >nul
-if errorlevel 1 exit /b 1
+findstr /C:"flightPlaneY: 3.25" "src\game-core.js" >nul
+if errorlevel 1 (
+  echo [ERROR] Shared flight plane configuration was not found.
+  exit /b 1
+)
+findstr /C:"cameraPitchDeg: 30" "src\game-core.js" >nul
+if errorlevel 1 (
+  echo [ERROR] Elevated camera pitch configuration was not found.
+  exit /b 1
+)
+findstr /C:"cameraBackOffset: 4.0" "src\game-core.js" >nul
+if errorlevel 1 (
+  echo [ERROR] Rear camera offset configuration was not found.
+  exit /b 1
+)
 findstr /C:"function movePlayer" "src\game-core.js" >nul
-if errorlevel 1 (
-  echo [ERROR] movePlayer was not found in src\game-core.js.
-  exit /b 1
-)
-findstr /C:"forward:keys.has('ArrowUp')" "src\game.js" >nul
-if errorlevel 1 (
-  echo [ERROR] Up/W forward-depth mapping was not found in src\game.js.
-  exit /b 1
-)
-findstr /C:"backward:keys.has('ArrowDown')" "src\game.js" >nul
-if errorlevel 1 (
-  echo [ERROR] Down/S backward-depth mapping was not found in src\game.js.
-  exit /b 1
-)
-findstr /C:"function drawTexturedTriangle" "src\game.js" >nul
 if errorlevel 1 exit /b 1
-findstr /C:"function startBgm" "src\audio.js" >nul
+findstr /C:"forward:keys.has('ArrowUp')" "src\game.js" >nul
+if errorlevel 1 exit /b 1
+findstr /C:"backward:keys.has('ArrowDown')" "src\game.js" >nul
+if errorlevel 1 exit /b 1
+findstr /C:"function makeGlossMetalTexture" "src\game.js" >nul
 if errorlevel 1 (
-  echo [ERROR] Procedural BGM implementation was not found in src\audio.js.
+  echo [ERROR] Gloss-metal texture generator was not found.
   exit /b 1
 )
-findstr /C:"function playLaser" "src\audio.js" >nul
+findstr /C:"function drawWorldTexturedQuad" "src\game.js" >nul
 if errorlevel 1 (
-  echo [ERROR] Sound-effect implementation was not found in src\audio.js.
+  echo [ERROR] Capital-ship texture mapping implementation was not found.
+  exit /b 1
+)
+findstr /C:"const melody = [" "src\audio.js" >nul
+if errorlevel 1 exit /b 1
+findstr /C:"bgmBus.gain.value = 0.34" "src\audio.js" >nul
+if errorlevel 1 (
+  echo [ERROR] Expected BGM level was not found.
   exit /b 1
 )
 findstr /C:"non_negotiable_invariants:" "harness\app_blueprint.yaml" >nul
