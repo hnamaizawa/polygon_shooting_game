@@ -17,6 +17,7 @@ assert.strictEqual(C.stagePhase(49.9), 'normal');
 assert.strictEqual(C.stagePhase(50), 'boss');
 assert.strictEqual(C.stageRemaining(0), 60);
 assert.strictEqual(C.stageRemaining(61), 0);
+assert.ok(!C.shouldAdvanceStage(59.99));assert.ok(C.shouldAdvanceStage(60));
 
 const continued=C.continueCampaign({stage:3,score:12345,worldScroll:987.5,continueCount:2});
 assert.deepStrictEqual(continued,{stage:3,score:12345,worldScroll:987.5,continueCount:3,lives:3,stageElapsed:0});
