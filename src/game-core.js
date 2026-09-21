@@ -5,7 +5,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.4.1';
+  const VERSION = '0.4.2';
   const CONFIG = Object.freeze({
     worldHalfWidth: 9.2,
     worldHalfHeight: 6.0,
@@ -21,6 +21,7 @@
     enemySpeedMin: 10.5,
     enemySpeedMax: 15.5,
     groundScrollSpeed: 10.2,
+    backgroundScrollSpeed: 10.2,
     laserSpeed: 66,
     fireCooldown: 0.22,
     enemyBulletSpeed: 28,
@@ -29,13 +30,15 @@
     cameraPitchDeg: 30,
     cameraFocal: 500,
     cameraBackOffset: 4.0,
-    stageDurationSec: 90,
-    bossIntroSec: 75,
-    stageCount: 4
+    stageDurationSec: 60,
+    bossIntroSec: 50,
+    stageCount: 4,
+    defaultLives: 3,
+    backdropTransitionSec: 4
   });
 
   const STAGES = Object.freeze([
-    Object.freeze({ number:1, name:'EARTH ORBIT', backdrop:'earth', speedMultiplier:1.00, spawnBase:0.92, groundChance:0.22, armorChance:0.05, airFireRate:0.16, groundFireRate:0.09, bossFireRate:0.62, bossHp:40 }),
+    Object.freeze({ number:1, name:'EARTH SURFACE', backdrop:'earthSurface', speedMultiplier:1.00, spawnBase:0.92, groundChance:0.28, armorChance:0.05, airFireRate:0.16, groundFireRate:0.09, bossFireRate:0.62, bossHp:40 }),
     Object.freeze({ number:2, name:'DEEP SPACE', backdrop:'space', speedMultiplier:1.10, spawnBase:0.82, groundChance:0.26, armorChance:0.07, airFireRate:0.18, groundFireRate:0.10, bossFireRate:0.68, bossHp:55 }),
     Object.freeze({ number:3, name:'ENEMY FLAGSHIP', backdrop:'carrier', speedMultiplier:1.20, spawnBase:0.72, groundChance:0.34, armorChance:0.09, airFireRate:0.20, groundFireRate:0.12, bossFireRate:0.74, bossHp:70 }),
     Object.freeze({ number:4, name:'FLAGSHIP CORE', backdrop:'interior', speedMultiplier:1.32, spawnBase:0.62, groundChance:0.40, armorChance:0.12, airFireRate:0.22, groundFireRate:0.14, bossFireRate:0.82, bossHp:90 })
@@ -46,6 +49,22 @@
   function stageConfig(stageNumber) { return STAGES[clamp(Math.floor(stageNumber || 1), 1, STAGES.length) - 1]; }
   function stagePhase(stageElapsed) { return stageElapsed >= CONFIG.bossIntroSec ? 'boss' : 'normal'; }
   function stageRemaining(stageElapsed) { return Math.max(0, CONFIG.stageDurationSec - stageElapsed); }
+  function shouldAdvanceStage(stageElapsed) { return stageElapsed >= CONFIG.stageDurationSec; }
+
+  function continueCampaign(snapshot = {}) {
+    return {
+      stage: clamp(Math.floor(snapshot.stage || 1), 1, CONFIG.stageCount),
+      score: Math.max(0, Math.floor(snapshot.score || 0)),
+      worldScroll: Math.max(0, Number(snapshot.worldScroll) || 0),
+      continueCount: Math.max(0, Math.floor(snapshot.continueCount || 0)) + 1,
+      lives: CONFIG.defaultLives,
+      stageElapsed: 0
+    };
+  }
+
+  function nextLives(lives, invincible = false) {
+    return invincible ? Math.max(0, lives) : Math.max(0, lives - 1);
+  }
 
   function project3D(point, viewport, focal = 520) {
     const z = Math.max(0.2, point.z);
@@ -255,7 +274,7 @@
   }
 
   return {
-    VERSION, CONFIG, STAGES, clamp, rand, stageConfig, stagePhase, stageRemaining,
+    VERSION, CONFIG, STAGES, clamp, rand, stageConfig, stagePhase, stageRemaining, shouldAdvanceStage, continueCampaign, nextLives,
     project3D, projectChase3D, movePlayer, spheresHit, planarHit,
     scoreForEnemy, nextEnemySpawn, makeEnemy, moveEnemy,
     makeGroundEnemy, moveGroundEnemy, makeArmorPlate, moveArmorPlate,

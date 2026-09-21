@@ -1,20 +1,28 @@
 const assert = require('assert');
 const C = require('../src/game-core.js');
 
-assert.strictEqual(C.VERSION, '0.4.1');
+assert.strictEqual(C.VERSION, '0.4.2');
 assert.strictEqual(C.CONFIG.stageCount, 4);
-assert.strictEqual(C.CONFIG.stageDurationSec, 90);
-assert.strictEqual(C.CONFIG.bossIntroSec, 75);
-assert.ok(C.CONFIG.fireCooldown > 0.16, 'player fire rate should be slightly reduced');
+assert.strictEqual(C.CONFIG.stageDurationSec, 60);
+assert.strictEqual(C.CONFIG.bossIntroSec, 50);
+assert.strictEqual(C.CONFIG.defaultLives, 3);
+assert.ok(C.CONFIG.fireCooldown > 0.16, 'player fire rate should remain reduced');
 assert.strictEqual(C.STAGES.length, 4);
-assert.deepStrictEqual(C.STAGES.map(s=>s.backdrop), ['earth','space','carrier','interior']);
+assert.deepStrictEqual(C.STAGES.map(s=>s.backdrop), ['earthSurface','space','carrier','interior']);
+assert.strictEqual(C.STAGES[0].name, 'EARTH SURFACE');
 assert.ok(C.STAGES[3].speedMultiplier > C.STAGES[0].speedMultiplier);
 assert.ok(C.STAGES[3].bossHp > C.STAGES[0].bossHp);
 assert.ok(C.STAGES[3].airFireRate > C.STAGES[0].airFireRate);
-assert.strictEqual(C.stagePhase(74.9), 'normal');
-assert.strictEqual(C.stagePhase(75), 'boss');
-assert.strictEqual(C.stageRemaining(0), 90);
-assert.strictEqual(C.stageRemaining(91), 0);
+assert.strictEqual(C.stagePhase(49.9), 'normal');
+assert.strictEqual(C.stagePhase(50), 'boss');
+assert.strictEqual(C.stageRemaining(0), 60);
+assert.strictEqual(C.stageRemaining(61), 0);
+assert.ok(!C.shouldAdvanceStage(59.99));assert.ok(C.shouldAdvanceStage(60));
+
+const continued=C.continueCampaign({stage:3,score:12345,worldScroll:987.5,continueCount:2});
+assert.deepStrictEqual(continued,{stage:3,score:12345,worldScroll:987.5,continueCount:3,lives:3,stageElapsed:0});
+assert.strictEqual(C.nextLives(3,true),3,'invincible mode must not reduce lives');
+assert.strictEqual(C.nextLives(3,false),2,'normal damage must reduce lives');
 
 const start={x:0,y:C.CONFIG.flightPlaneY,z:9};
 const forward=C.movePlayer(start,{forward:true},.5),backward=C.movePlayer(start,{backward:true},.5);
