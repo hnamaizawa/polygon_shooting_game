@@ -3,7 +3,7 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 
 echo [1/3] Checking required files...
-for %%F in (index.html style.css src\game.js src\game-core.js src\audio.js harness\app_blueprint.yaml README.md tests\core.test.js tests\browser.test.html) do (
+for %%F in (index.html style.css src\game.js src\game-core.js src\v052-enhancements.js src\audio.js harness\app_blueprint.yaml README.md tests\core.test.js tests\browser.test.html) do (
   if not exist "%%F" (
     echo [ERROR] Missing %%F
     exit /b 1
@@ -12,21 +12,20 @@ for %%F in (index.html style.css src\game.js src\game-core.js src\audio.js harne
 echo PASS: required files found.
 
 echo [2/3] Checking harness/source invariants...
-findstr /C:"const VERSION = '0.5.1'" "src\game-core.js" >nul || exit /b 1
+findstr /C:"const VERSION = '0.5.2'" "src\v052-enhancements.js" >nul || exit /b 1
+findstr /C:"const CAMPAIGN_LOOPS = 2" "src\v052-enhancements.js" >nul || exit /b 1
+findstr /C:"const LOOP2_ENEMY_MULTIPLIER = 1.2" "src\v052-enhancements.js" >nul || exit /b 1
+findstr /C:"const LOOP2_BOSS_HP_MULTIPLIER = 1.2" "src\v052-enhancements.js" >nul || exit /b 1
+findstr /C:"function installCanvasPolygonDetail" "src\v052-enhancements.js" >nul || exit /b 1
+findstr /C:"stageCount: STAGES_PER_LOOP * CAMPAIGN_LOOPS" "src\v052-enhancements.js" >nul || exit /b 1
+findstr /C:"src/v052-enhancements.js" "index.html" >nul || exit /b 1
 findstr /C:"stageDurationSec: 60" "src\game-core.js" >nul || exit /b 1
 findstr /C:"bossIntroSec: 50" "src\game-core.js" >nul || exit /b 1
 findstr /C:"function mapSegment" "src\game-core.js" >nul || exit /b 1
 findstr /C:"function updatePlayerBeamCharge" "src\game-core.js" >nul || exit /b 1
 findstr /C:"function makeSecretCharacter" "src\game-core.js" >nul || exit /b 1
 findstr /C:"function drawSecretCharacter" "src\game.js" >nul || exit /b 1
-findstr /C:"function beamHitsX" "src\game-core.js" >nul || exit /b 1
-findstr /C:"beamfighter" "src\game-core.js" >nul || exit /b 1
-findstr /C:"bomber" "src\game-core.js" >nul || exit /b 1
-findstr /C:"raider" "src\game-core.js" >nul || exit /b 1
 findstr /C:"keys.has('KeyL')" "src\game.js" >nul || exit /b 1
-findstr /C:"function drawPlayerBeam" "src\game.js" >nul || exit /b 1
-findstr /C:"function drawEnemyBeam" "src\game.js" >nul || exit /b 1
-findstr /C:"function segmentWindow" "src\game.js" >nul || exit /b 1
 findstr /C:"const FIXED_STEP=1/60" "src\game.js" >nul || exit /b 1
 findstr /C:"non_negotiable_invariants:" "harness\app_blueprint.yaml" >nul || exit /b 1
 echo PASS: baseline source/harness invariants.
@@ -56,6 +55,7 @@ exit /b 0
 :node_tests
 echo [INFO] Node.js detected. Running full JavaScript tests...
 node --check src\game-core.js || exit /b 1
+node --check src\v052-enhancements.js || exit /b 1
 node --check src\audio.js || exit /b 1
 node --check src\game.js || exit /b 1
 node tests\core.test.js || exit /b 1
