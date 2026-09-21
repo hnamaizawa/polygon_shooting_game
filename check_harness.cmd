@@ -12,10 +12,13 @@ for %%F in (index.html style.css src\game.js src\game-core.js src\audio.js harne
 echo PASS: required files found.
 
 echo [2/3] Checking harness/source invariants...
-findstr /C:"const VERSION = '0.5.0'" "src\game-core.js" >nul || exit /b 1
+findstr /C:"const VERSION = '0.5.1'" "src\game-core.js" >nul || exit /b 1
 findstr /C:"stageDurationSec: 60" "src\game-core.js" >nul || exit /b 1
 findstr /C:"bossIntroSec: 50" "src\game-core.js" >nul || exit /b 1
 findstr /C:"function mapSegment" "src\game-core.js" >nul || exit /b 1
+findstr /C:"function updatePlayerBeamCharge" "src\game-core.js" >nul || exit /b 1
+findstr /C:"function makeSecretCharacter" "src\game-core.js" >nul || exit /b 1
+findstr /C:"function drawSecretCharacter" "src\game.js" >nul || exit /b 1
 findstr /C:"function beamHitsX" "src\game-core.js" >nul || exit /b 1
 findstr /C:"beamfighter" "src\game-core.js" >nul || exit /b 1
 findstr /C:"bomber" "src\game-core.js" >nul || exit /b 1
@@ -70,7 +73,6 @@ findstr /C:"PASS: browser core tests" "%TEST_OUT%" >nul
 if errorlevel 1 (
   echo [ERROR] Browser JavaScript tests failed.
   if exist "%TEST_OUT%" type "%TEST_OUT%"
-  if exist "%TEST_OUT%" del /q "%TEST_OUT%" >nul 2>nul
   if exist "%TEST_PROFILE%" rmdir /s /q "%TEST_PROFILE%" >nul 2>nul
   exit /b 1
 )

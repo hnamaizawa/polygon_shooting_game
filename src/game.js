@@ -62,8 +62,8 @@
     return {
       running:true,gameOver:false,victory:false,score:options.score||0,lives:C.CONFIG.defaultLives,
       elapsed:options.elapsed||0,stage:options.stage||1,stageElapsed:0,worldScroll:options.worldScroll||0,continueCount:options.continueCount||0,
-      transitionFromBackdrop:null,transitionTimer:0,spawnTimer:.35,enemyId:1,fireTimer:0,beamTimer:0,beamSoundLatch:false,hitCooldown:0,shake:0,
-      boss:null,bossSpawned:false,stageCleared:false,bannerTimer:3,playerBeamActive:false,playerBeamEndZ:C.CONFIG.playerBeamRange,
+      transitionFromBackdrop:null,transitionTimer:0,spawnTimer:.35,enemyId:1,fireTimer:0,beamTimer:0,beamSoundLatch:false,playerBeamCharge:0,playerBeamTime:0,hitCooldown:0,shake:0,
+      boss:null,bossSpawned:false,stageCleared:false,bannerTimer:3,playerBeamActive:false,playerBeamEndZ:C.CONFIG.playerBeamRange,secretCharacter:null,secretSpawned:false,secretFound:false,
       player:{x:0,y:C.CONFIG.flightPlaneY,z:C.CONFIG.playerZ},
       enemies:[],groundEnemies:[],armorPlates:[],lasers:[],enemyBullets:[],particles:[],stars:Array.from({length:110},()=>makeStar(true))
     };
@@ -100,7 +100,7 @@
     if(state.stage>=C.CONFIG.stageCount){finishGame();return;}
     const oldBackdrop=currentStage().backdrop;state.stage++;state.transitionFromBackdrop=oldBackdrop;state.transitionTimer=C.CONFIG.backdropTransitionSec;
     state.stageElapsed=0;state.spawnTimer=.55;state.boss=null;state.bossSpawned=false;state.stageCleared=false;state.bannerTimer=3;
-    state.enemies=[];state.groundEnemies=[];state.armorPlates=[];state.lasers=[];state.enemyBullets=[];A.playStageClear();
+    state.enemies=[];state.groundEnemies=[];state.armorPlates=[];state.lasers=[];state.enemyBullets=[];state.secretCharacter=null;state.secretSpawned=false;state.secretFound=false;state.playerBeamCharge=0;state.playerBeamTime=0;state.playerBeamActive=false;A.playStageClear();
   }
   function finishGame(){state.running=false;state.victory=true;A.playStageClear();startPanel.innerHTML=`<h1>ALL STAGES CLEARED</h1><p>SCORE ${String(state.score).padStart(7,'0')}</p><p>CONTINUE ${state.continueCount}</p><p>R / Enter で再出撃</p><button id="restartButton">RESTART</button>`;startPanel.classList.remove('hidden');document.getElementById('restartButton').addEventListener('click',start);}
   function endGame(){state.running=false;state.gameOver=true;A.playGameOver();startPanel.innerHTML=`<h1>GAME OVER</h1><p>STAGE ${state.stage}</p><p>SCORE ${String(state.score).padStart(7,'0')}</p><p>C で同じステージからコンティニュー</p><button id="continueButton">CONTINUE</button><button id="restartButton">RESTART</button>`;startPanel.classList.remove('hidden');document.getElementById('continueButton').addEventListener('click',continueGame);document.getElementById('restartButton').addEventListener('click',start);}
@@ -122,18 +122,22 @@
     for(const p of state.armorPlates){if(p.alive&&C.beamTargetAhead(sourceZ,p.z)&&C.beamHitsX(beamX,p.x,1.85)&&p.z<endZ){endZ=p.z;kind='armor';target=p;}}
     for(const e of state.enemies){if(e.alive&&C.beamTargetAhead(sourceZ,e.z)&&C.beamHitsX(beamX,e.x,C.CONFIG.playerBeamWidth+(e.kind==='bomber'?.55:.2))&&e.z<endZ){endZ=e.z;kind='air';target=e;}}
     if(state.boss?.alive&&C.beamTargetAhead(sourceZ,state.boss.z)&&C.beamHitsX(beamX,state.boss.x,2.5)&&state.boss.z<endZ){endZ=state.boss.z;kind='boss';target=state.boss;}
+    if(state.secretCharacter?.alive&&!state.secretCharacter.hidden&&C.beamTargetAhead(sourceZ,state.secretCharacter.z)&&C.beamHitsX(beamX,state.secretCharacter.x,1.0)&&state.secretCharacter.z<endZ){endZ=state.secretCharacter.z;kind='secret';target=state.secretCharacter;}
     return{sourceZ,endZ,kind,target};
   }
 
   function updatePlayerBeam(dt){
-    state.beamTimer-=dt;state.playerBeamActive=keys.has('KeyL');
+    state.beamTimer-=dt;
+    const beamState=C.updatePlayerBeamCharge({charge:state.playerBeamCharge,active:state.playerBeamTime},keys.has('KeyL'),dt);
+    state.playerBeamCharge=beamState.charge;state.playerBeamTime=beamState.active;state.playerBeamActive=state.playerBeamTime>0;
+    if(beamState.justFired){A.playLaser();state.beamSoundLatch=true;}
     if(!state.playerBeamActive){state.beamSoundLatch=false;state.playerBeamEndZ=state.player.z+C.CONFIG.playerBeamRange;return;}
-    if(!state.beamSoundLatch){A.playLaser();state.beamSoundLatch=true;}
     const hit=nearestPlayerBeamHit();state.playerBeamEndZ=hit.endZ;
     if(state.beamTimer<=0){
       if(hit.kind==='armor'){hit.target.flash=.13;burst(hit.target.x,hit.target.y,hit.target.z,4);A.playArmorPing();}
       else if(hit.kind==='air')hitEnemy(hit.target,1);
       else if(hit.kind==='boss')hitBoss(1);
+      else if(hit.kind==='secret'){hit.target.alive=false;state.secretFound=true;state.score+=7777;burst(hit.target.x,hit.target.y,hit.target.z,28);A.playExplosion();}
       state.beamTimer=C.CONFIG.playerBeamDamageInterval;
     }
   }
@@ -157,9 +161,12 @@
     updatePlayerBeam(dt);
     if(state.stageElapsed>=C.CONFIG.bossIntroSec)spawnBoss();
     if(state.spawnTimer<=0)spawnWave();
+    if(!state.secretSpawned&&C.secretEncounter(state.stage,state.stageElapsed)){state.secretCharacter=C.makeSecretCharacter(state.stage);state.secretSpawned=true;}
+    if(state.secretCharacter?.alive)state.secretCharacter=C.moveSecretCharacter(state.secretCharacter,dt);
     for(const s of state.stars){s.z-=s.speed*dt;if(s.z<3)Object.assign(s,makeStar(false));}
     for(const l of state.lasers)l.z+=C.CONFIG.laserSpeed*dt;
     state.lasers=state.lasers.filter(l=>l.z<125);
+    if(state.secretCharacter?.alive&&!state.secretCharacter.hidden){for(const l of state.lasers){if(l.z<900&&C.spheresHit(state.secretCharacter,l,1.0,2.8)){l.z=999;state.secretCharacter.alive=false;state.secretFound=true;state.score+=7777;burst(state.secretCharacter.x,state.secretCharacter.y,state.secretCharacter.z,28);A.playExplosion();}}}
 
     state.enemies=state.enemies.map(e=>{
       let m=C.moveEnemy(e,state.elapsed,dt,state.player.x);
@@ -255,38 +262,53 @@
 
   function drawSpaceBackdrop(){
     const baseIndex=Math.floor(state.worldScroll/C.CONFIG.mapSegmentLength),seg=C.mapSegment(baseIndex,2);
-    const g=ctx.createRadialGradient(PLAY_W*(.25+.55*seg.accent),H*.2,15,PLAY_W*.55,H*.25,360);g.addColorStop(0,seg.biome==='nebula'?'rgba(120,55,160,.34)':'rgba(55,95,145,.16)');g.addColorStop(.5,'rgba(35,40,90,.12)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(0,0,PLAY_W,H);
+    const nebula=ctx.createRadialGradient(PLAY_W*(.22+.55*seg.accent),H*(.18+.08*Math.sin(baseIndex)),18,PLAY_W*.52,H*.28,420);
+    nebula.addColorStop(0,seg.biome==='nebula'?'rgba(143,72,190,.42)':'rgba(60,105,160,.18)');nebula.addColorStop(.45,'rgba(35,48,100,.16)');nebula.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=nebula;ctx.fillRect(0,0,PLAY_W,H);
+    const px=95+((baseIndex*37)%420),py=112+(baseIndex%3)*26,pr=62+seg.accent*34;
+    const planet=ctx.createRadialGradient(px-pr*.28,py-pr*.28,5,px,py,pr);planet.addColorStop(0,'rgba(190,220,255,.88)');planet.addColorStop(.42,'rgba(70,112,165,.82)');planet.addColorStop(.78,'rgba(24,48,88,.9)');planet.addColorStop(1,'rgba(4,8,18,0)');ctx.fillStyle=planet;ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(135,185,235,.25)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(px,py,pr*.82,-.3,2.4);ctx.stroke();
     const y=C.CONFIG.groundPlaneY+.3;
     for(const item of segmentWindow(2)){
       const {z0,z1,seg:s}=item,mid=(z0+z1)/2;
-      if(s.biome==='debris'||s.biome==='asteroids'){for(let k=0;k<3+(s.biome==='asteroids'?2:0);k++){const x=s.offset+(k-1.5)*3.1,y2=C.CONFIG.flightPlaneY+1.7+(k%2)*1.1;drawWorldPolygon([[x-.35,y2,mid+k],[x+.35,y2,mid+k],[x+.22,y2,mid+k+.8],[x-.22,y2,mid+k+.8]],s.biome==='asteroids'?'#625e58':'#6c7c86');}}
-      if(s.biome==='outpost')drawWorldTexturedQuad([[s.offset-2,y,mid-2],[s.offset+2,y,mid-2],[s.offset+1.6,y,mid+3],[s.offset-1.6,y,mid+3]],textures.carrier,.12,.32);
+      if(s.biome==='debris'||s.biome==='asteroids'){for(let k=0;k<3+(s.biome==='asteroids'?3:0);k++){const x=s.offset+(k-2)*2.8,y2=C.CONFIG.flightPlaneY+1.4+(k%3)*.9,sz=.32+(k%3)*.16;drawWorldPolygon([[x-sz,y2,mid+k],[x+sz,y2,mid+k],[x+sz*.5,y2-.22,mid+k+.9],[x-sz*.65,y2+.16,mid+k+.7]],s.biome==='asteroids'?'#665f58':'#6f8089','#252b31',.7);}}
+      if(s.biome==='outpost'){drawWorldTexturedQuad([[s.offset-2.4,y,mid-2.4],[s.offset+2.4,y,mid-2.4],[s.offset+1.8,y,mid+3.4],[s.offset-1.8,y,mid+3.4]],textures.carrier,.12,.36);drawLine3D([s.offset-3.5,y-.8,mid],[s.offset+3.5,y-.8,mid],'rgba(110,210,255,.55)',2);drawLine3D([s.offset,y-2.2,mid],[s.offset,y+.6,mid],'rgba(220,240,255,.58)',2);}
+      if(s.landmark)drawLine3D([s.offset-1.8,2.2,mid],[s.offset+1.8,2.2,mid],'rgba(90,180,255,.22)',1);
     }
   }
 
   function drawCapitalShip(){
-    const y=7.42;drawWorldTexturedQuad([[-12,y,8],[12,y,8],[10.2,y-.1,124],[-10.2,y-.1,124]],textures.carrier,.12,.28);
+    const y=7.42;
+    drawWorldTexturedQuad([[-12,y,8],[12,y,8],[10.2,y-.1,124],[-10.2,y-.1,124]],textures.carrier,.12,.34);
+    drawWorldTexturedQuad([[-12,y,8],[-10.2,y-.1,124],[-9.0,2.0,124],[-13,2.2,8]],textures.carrier,.24,.18);
+    drawWorldTexturedQuad([[12,y,8],[13,2.2,8],[9.0,2.0,124],[10.2,y-.1,124]],textures.carrier,.22,.18);
     for(const item of segmentWindow(3)){
       const {z0,z1,seg}=item,mid=(z0+z1)/2;
-      if(seg.biome==='hangar')drawWorldPolygon([[-6,y-.12,z0+2],[6,y-.12,z0+2],[5.4,y-.12,z1-2],[-5.4,y-.12,z1-2]],'#071018','#8aa1b3',1);
-      else if(seg.biome==='vents'){for(const x of[-7,-3,3,7])drawWorldPolygon([[x-.45,y-.13,z0+2],[x+.45,y-.13,z0+2],[x+.35,y-.13,z1-2],[x-.35,y-.13,z1-2]],'#1c2a33','#91afc3',.7);}
-      else if(seg.biome==='trench')drawWorldPolygon([[-1.1,y-.15,z0],[1.1,y-.15,z0],[.9,y-.15,z1],[-.9,y-.15,z1]],'#05090e','#5d809a',1);
-      else if(seg.biome==='turretDeck'){for(const x of[-5,5])drawWorldTexturedQuad([[x-1,y-.14,mid-2],[x+1,y-.14,mid-2],[x+.8,y-.14,mid+2],[x-.8,y-.14,mid+2]],textures.turret,.08,.34);}
-      else{for(const x of[-7,7])drawWorldTexturedQuad([[x-1.5,y-.12,z0+1],[x+1.5,y-.12,z0+1],[x+1.2,y-.12,z1-1],[x-1.2,y-.12,z1-1]],textures.carrier,.12,.3);}
+      drawLine3D([-9.5,y-.18,z0],[9.5,y-.18,z0],'rgba(180,205,225,.18)',.8);
+      if(seg.biome==='hangar'){drawWorldPolygon([[-6,y-.14,z0+2],[6,y-.14,z0+2],[5.4,y-.14,z1-2],[-5.4,y-.14,z1-2]],'#050a0f','#9db4c4',1.2);for(const x of[-5.5,5.5])drawLine3D([x,y-.22,z0+2],[x,y-.22,z1-2],'rgba(80,185,255,.45)',1.5);}
+      else if(seg.biome==='vents'){for(const x of[-7,-3,3,7]){drawWorldPolygon([[x-.5,y-.16,z0+2],[x+.5,y-.16,z0+2],[x+.38,y-.16,z1-2],[x-.38,y-.16,z1-2]],'#14212a','#9ab8ca',.7);drawLine3D([x-.28,y-.25,mid],[x+.28,y-.25,mid],'rgba(210,235,245,.38)',1);}}
+      else if(seg.biome==='trench'){drawWorldPolygon([[-1.35,y-.18,z0],[1.35,y-.18,z0],[1.05,y-.18,z1],[-1.05,y-.18,z1]],'#03070b','#6b91ac',1);drawLine3D([0,y-.28,z0],[0,y-.28,z1],'rgba(60,190,255,.48)',1.5);}
+      else if(seg.biome==='turretDeck'){for(const x of[-5,5]){drawWorldTexturedQuad([[x-1.2,y-.15,mid-2.2],[x+1.2,y-.15,mid-2.2],[x+.9,y-.15,mid+2.2],[x-.9,y-.15,mid+2.2]],textures.turret,.08,.38);drawLine3D([x,y-1.8,mid],[x,y-.2,mid],'rgba(230,245,255,.55)',2);}}
+      else{for(const x of[-7,7])drawWorldTexturedQuad([[x-1.5,y-.12,z0+1],[x+1.5,y-.12,z0+1],[x+1.2,y-.12,z1-1],[x-1.2,y-.12,z1-1]],textures.carrier,.12,.32);}
+      for(const x of[-8.6,8.6])drawLine3D([x,y-.28,z0+1],[x,y-.28,z1-1],'rgba(120,205,255,.28)',1);
+      if(seg.landmark){const x=seg.offset*.5;drawWorldTexturedQuad([[x-1.3,y-.3,mid-1.2],[x+1.3,y-.3,mid-1.2],[x+1.0,y-2.2,mid+.8],[x-1.0,y-2.2,mid+.8]],textures.carrier,.06,.42);}
     }
   }
 
   function drawInterior(){
-    const y=7.2;drawWorldTexturedQuad([[-10.5,y,8],[10.5,y,8],[8.5,y-.2,124],[-8.5,y-.2,124]],textures.interior,.13,.30);
-    drawWorldTexturedQuad([[-10.5,y,8],[-8.5,y-.2,124],[-7.5,-2.5,124],[-11.5,-2.5,8]],textures.interior,.26,.18);
-    drawWorldTexturedQuad([[10.5,y,8],[11.5,-2.5,8],[7.5,-2.5,124],[8.5,y-.2,124]],textures.interior,.23,.18);
+    const y=7.2;
+    drawWorldTexturedQuad([[-10.5,y,8],[10.5,y,8],[8.5,y-.2,124],[-8.5,y-.2,124]],textures.interior,.13,.32);
+    drawWorldTexturedQuad([[-10.5,y,8],[-8.5,y-.2,124],[-7.5,-2.5,124],[-11.5,-2.5,8]],textures.interior,.28,.20);
+    drawWorldTexturedQuad([[10.5,y,8],[11.5,-2.5,8],[7.5,-2.5,124],[8.5,y-.2,124]],textures.interior,.26,.20);
+    drawWorldTexturedQuad([[-11.5,-2.5,8],[-7.5,-2.5,124],[7.5,-2.5,124],[11.5,-2.5,8]],textures.interior,.31,.14);
     for(const item of segmentWindow(4)){
       const {z0,z1,seg}=item,mid=(z0+z1)/2;
-      if(seg.biome==='reactor'){ctx.save();ctx.shadowColor='#ff6666';ctx.shadowBlur=14;drawLine3D([-6,2.0,mid],[6,2.0,mid],'#ff5d62',4);ctx.restore();}
-      else if(seg.biome==='conduit'){for(const x of[-7.2,-5.8,5.8,7.2])drawLine3D([x,6.3,z0],[x,6.3,z1],'rgba(90,200,255,.55)',2);}
-      else if(seg.biome==='gate'){drawLine3D([-8.5,6.8,mid],[8.5,6.8,mid],'rgba(240,245,255,.65)',3);drawLine3D([-7,-1.7,mid],[7,-1.7,mid],'rgba(240,245,255,.35)',2);}
-      else if(seg.biome==='bay'){for(const x of[-6.8,6.8])drawWorldPolygon([[x-1.2,6.1,z0+2],[x+1.2,6.1,z0+2],[x+1.0,6.1,z1-2],[x-1.0,6.1,z1-2]],'#13191f','#8d9eaa',1);}
-      else drawLine3D([-9.5,6.7,mid],[9.5,6.7,mid],'rgba(255,90,90,.20)',1.5);
+      for(const z of[z0,z1]){drawLine3D([-10,6.7,z],[-7.4,-2.0,z],'rgba(160,185,205,.22)',1.4);drawLine3D([10,6.7,z],[7.4,-2.0,z],'rgba(160,185,205,.22)',1.4);}
+      if(seg.biome==='reactor'){ctx.save();ctx.shadowColor='#ff6670';ctx.shadowBlur=18;for(let r=0;r<3;r++)drawLine3D([-5+r,2.0-r*.35,mid],[5-r,2.0-r*.35,mid],r===0?'#ff6268':'rgba(255,120,130,.55)',4-r);ctx.restore();}
+      else if(seg.biome==='conduit'){for(const x of[-7.2,-5.8,5.8,7.2]){drawLine3D([x,6.3,z0],[x,6.3,z1],'rgba(80,205,255,.62)',2.2);drawLine3D([x,-1.4,z0],[x,-1.4,z1],'rgba(255,115,80,.28)',1.3);}}
+      else if(seg.biome==='gate'){drawLine3D([-8.5,6.8,mid],[8.5,6.8,mid],'rgba(235,245,255,.75)',3.2);drawLine3D([-7,-1.7,mid],[7,-1.7,mid],'rgba(235,245,255,.45)',2.2);for(const x of[-7.5,7.5])drawLine3D([x,6.2,mid],[x,-1.4,mid],'rgba(110,190,255,.42)',1.5);}
+      else if(seg.biome==='bay'){for(const x of[-6.8,6.8]){drawWorldPolygon([[x-1.2,6.1,z0+2],[x+1.2,6.1,z0+2],[x+1.0,6.1,z1-2],[x-1.0,6.1,z1-2]],'#0d141a','#94a7b4',1);drawLine3D([x,5.7,z0+2],[x,5.7,z1-2],'rgba(70,175,255,.32)',1);}}
+      else drawLine3D([-9.5,6.7,mid],[9.5,6.7,mid],'rgba(255,90,90,.24)',1.7);
+      for(const x of[-9.2,9.2])drawLine3D([x,5.8,z0],[x,5.8,z1],'rgba(140,190,220,.14)',1);
     }
   }
 
@@ -306,6 +328,14 @@
     const a=projectWorld(state.player.x,C.CONFIG.flightPlaneY-.18,state.player.z+2.2),b=projectWorld(state.player.x,C.CONFIG.flightPlaneY-.18,state.playerBeamEndZ);
     ctx.save();ctx.shadowColor='#55eaff';ctx.shadowBlur=12;ctx.strokeStyle='rgba(70,235,255,.96)';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
   }
+  function drawSecretCharacter(){
+    const s=state.secretCharacter;if(!s?.alive||s.hidden)return;
+    const p=projectWorld(s.x,s.y,s.z);if(p.depth<=.2)return;
+    const r=Math.max(5,Math.min(18,150/p.depth));ctx.save();ctx.shadowColor='#ffd84f';ctx.shadowBlur=14;
+    ctx.fillStyle='#e5b72b';ctx.beginPath();ctx.moveTo(p.x,p.y-r);ctx.lineTo(p.x+r*.85,p.y+r*.55);ctx.lineTo(p.x-r*.85,p.y+r*.55);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='#fff2a5';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='#151515';ctx.fillRect(p.x-r*.28,p.y-r*.08,2,2);ctx.fillRect(p.x+r*.22,p.y-r*.08,2,2);ctx.restore();
+  }
+
   function enemyVisual(e){
     if(e.kind==='dart')return{model:dartModel,scale:1.25,texture:textures.dart};
     if(e.kind==='bomber')return{model:bomberModel,scale:1.15,texture:textures.bomber};
@@ -326,6 +356,7 @@
     for(const b of state.enemyBullets){const p=projectWorld(b.x,b.y,b.z);if(p.depth>.2){ctx.fillStyle='#ffd35a';ctx.shadowColor='#ff7d34';ctx.shadowBlur=8;ctx.beginPath();ctx.arc(p.x,p.y,3.1,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}}
     for(const e of [...state.enemies].sort((a,b)=>b.z-a.z)){drawEnemyBeam(e);const v=enemyVisual(e);drawMesh(v.model,e,v.scale,v.texture,e.kind==='beamfighter'?.55:.42);}
     if(state.boss?.alive){drawEnemyBeam(state.boss);drawMesh(bossModel,state.boss,1.55,textures.boss,.48);}
+    drawSecretCharacter();
     for(const p of state.particles){const q=projectWorld(p.x,p.y,p.z);ctx.fillStyle=p.life>.3?'#fff':'#ff9a60';ctx.fillRect(q.x,q.y,3,3);}
     drawPlayer();drawBossBar();drawBanner();ctx.restore();
   }
@@ -338,7 +369,7 @@
   function drawHUD(){
     ctx.fillStyle='#05070a';ctx.fillRect(HUD_X,0,W-HUD_X,H);ctx.strokeStyle='#c4c9d0';ctx.lineWidth=2;ctx.strokeRect(HUD_X+10,10,W-HUD_X-20,H-20);
     ctx.fillStyle='#e9edf3';ctx.textAlign='center';ctx.font='bold 18px monospace';ctx.fillText('SCORE',860,42);ctx.font='bold 26px monospace';ctx.fillStyle='#ff5555';ctx.fillText(String(state?.score||0).padStart(7,'0'),860,70);
-    box(785,94,150,88);ctx.fillStyle='#fff';ctx.font='bold 16px monospace';ctx.fillText('WEAPONS',860,118);ctx.font='bold 15px monospace';ctx.fillStyle='#ff7b70';ctx.fillText('PULSE  Space/J',860,143);ctx.fillStyle='#6eefff';ctx.fillText('LASER  L',860,166);
+    box(785,94,150,88);ctx.fillStyle='#fff';ctx.font='bold 16px monospace';ctx.fillText('WEAPONS',860,118);ctx.font='bold 15px monospace';ctx.fillStyle='#ff7b70';ctx.fillText('PULSE  Space/J',860,141);ctx.fillStyle='#6eefff';ctx.fillText(state?.playerBeamActive?'LASER  FIRING':'LASER  HOLD L',860,160);const beamRatio=state?.playerBeamActive?Math.min(1,(state.playerBeamTime||0)/C.CONFIG.playerBeamActiveSec):Math.min(1,(state?.playerBeamCharge||0)/C.CONFIG.playerBeamChargeSec);ctx.strokeStyle='#6eefff';ctx.strokeRect(801,169,118,7);ctx.fillStyle=state?.playerBeamActive?'#ffffff':'#4bcfe8';ctx.fillRect(803,171,114*beamRatio,3);
     box(785,194,150,142);ctx.fillStyle='#fff';ctx.font='bold 16px monospace';ctx.fillText('SHIP STATUS',860,219);drawHudShip(860,269);ctx.fillStyle='#ff5555';ctx.fillText(`LIFE ${state?.lives??3}`,860,319);
     box(785,352,150,118);ctx.fillStyle='#fff';ctx.font='bold 15px monospace';ctx.fillText(`STAGE ${state?.stage||1}/4`,860,379);ctx.font='bold 12px monospace';ctx.fillStyle='#9fd7ff';ctx.fillText(currentStage().name,860,401);ctx.fillStyle='#fff';ctx.fillText(formatTime(C.stageRemaining(state?.stageElapsed||0)),860,430);ctx.fillStyle='#ffb05f';ctx.fillText(`AIR ${state?.enemies?.length||0} GND ${state?.groundEnemies?.length||0}`,860,451);ctx.fillText(`BULLET ${state?.enemyBullets?.length||0}`,860,465);
     box(785,486,150,70);ctx.fillStyle='#fff';ctx.font='12px monospace';ctx.fillText(`INV ${invincibleMode?'ON':'OFF'} [I]`,860,507);ctx.fillText(`BGM ${A.isBgmEnabled?.()?'ON':'OFF'} [B]`,860,525);ctx.fillText(`TEXTURE ${textureEnabled?'ON':'OFF'} [T]`,860,543);
