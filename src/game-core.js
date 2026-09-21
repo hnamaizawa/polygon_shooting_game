@@ -5,7 +5,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.4.1';
+  const VERSION = '0.4.2';
   const CONFIG = Object.freeze({
     worldHalfWidth: 9.2,
     worldHalfHeight: 6.0,
@@ -21,6 +21,7 @@
     enemySpeedMin: 10.5,
     enemySpeedMax: 15.5,
     groundScrollSpeed: 10.2,
+    backgroundScrollSpeed: 10.2,
     laserSpeed: 66,
     fireCooldown: 0.22,
     enemyBulletSpeed: 28,
@@ -29,13 +30,15 @@
     cameraPitchDeg: 30,
     cameraFocal: 500,
     cameraBackOffset: 4.0,
-    stageDurationSec: 90,
-    bossIntroSec: 75,
-    stageCount: 4
+    stageDurationSec: 60,
+    bossIntroSec: 50,
+    stageCount: 4,
+    defaultLives: 3,
+    backdropTransitionSec: 4
   });
 
   const STAGES = Object.freeze([
-    Object.freeze({ number:1, name:'EARTH ORBIT', backdrop:'earth', speedMultiplier:1.00, spawnBase:0.92, groundChance:0.22, armorChance:0.05, airFireRate:0.16, groundFireRate:0.09, bossFireRate:0.62, bossHp:40 }),
+    Object.freeze({ number:1, name:'EARTH SURFACE', backdrop:'earthSurface', speedMultiplier:1.00, spawnBase:0.92, groundChance:0.28, armorChance:0.05, airFireRate:0.16, groundFireRate:0.09, bossFireRate:0.62, bossHp:40 }),
     Object.freeze({ number:2, name:'DEEP SPACE', backdrop:'space', speedMultiplier:1.10, spawnBase:0.82, groundChance:0.26, armorChance:0.07, airFireRate:0.18, groundFireRate:0.10, bossFireRate:0.68, bossHp:55 }),
     Object.freeze({ number:3, name:'ENEMY FLAGSHIP', backdrop:'carrier', speedMultiplier:1.20, spawnBase:0.72, groundChance:0.34, armorChance:0.09, airFireRate:0.20, groundFireRate:0.12, bossFireRate:0.74, bossHp:70 }),
     Object.freeze({ number:4, name:'FLAGSHIP CORE', backdrop:'interior', speedMultiplier:1.32, spawnBase:0.62, groundChance:0.40, armorChance:0.12, airFireRate:0.22, groundFireRate:0.14, bossFireRate:0.82, bossHp:90 })
@@ -47,18 +50,27 @@
   function stagePhase(stageElapsed) { return stageElapsed >= CONFIG.bossIntroSec ? 'boss' : 'normal'; }
   function stageRemaining(stageElapsed) { return Math.max(0, CONFIG.stageDurationSec - stageElapsed); }
 
+  function continueCampaign(snapshot = {}) {
+    return {
+      stage: clamp(Math.floor(snapshot.stage || 1), 1, CONFIG.stageCount),
+      score: Math.max(0, Math.floor(snapshot.score || 0)),
+      worldScroll: Math.max(0, Number(snapshot.worldScroll) || 0),
+      continueCount: Math.max(0, Math.floor(snapshot.continueCount || 0)) + 1,
+      lives: CONFIG.defaultLives,
+      stageElapsed: 0
+    };
+  }
+
+  function nextLives(lives, invincible = false) {
+    return invincible ? Math.max(0, lives) : Math.max(0, lives - 1);
+  }
+
   function project3D(point, viewport, focal = 520) {
     const z = Math.max(0.2, point.z);
     return { x: viewport.cx + point.x * focal / z, y: viewport.cy + point.y * focal / z, scale: focal / z, depth: z };
   }
 
-  function projectChase3D(
-    point,
-    viewport,
-    focal = CONFIG.cameraFocal,
-    pitch = CONFIG.cameraPitchDeg * Math.PI / 180,
-    backOffset = CONFIG.cameraBackOffset
-  ) {
+  function projectChase3D(point, viewport, focal = CONFIG.cameraFocal, pitch = CONFIG.cameraPitchDeg * Math.PI / 180, backOffset = CONFIG.cameraBackOffset) {
     const cos = Math.cos(pitch), sin = Math.sin(pitch);
     const yCam = point.y * cos - point.z * sin;
     const zCam = point.y * sin + point.z * cos + backOffset;
@@ -67,18 +79,12 @@
   }
 
   function movePlayer(player, input, dt) {
-    let x = player.x;
-    let z = player.z;
+    let x = player.x, z = player.z;
     if (input.left) x -= CONFIG.playerMoveSpeedX * dt;
     if (input.right) x += CONFIG.playerMoveSpeedX * dt;
     if (input.forward) z += CONFIG.playerMoveSpeedZ * dt;
     if (input.backward) z -= CONFIG.playerMoveSpeedZ * dt;
-    return {
-      ...player,
-      x: clamp(x, -CONFIG.worldHalfWidth, CONFIG.worldHalfWidth),
-      y: CONFIG.flightPlaneY,
-      z: clamp(z, CONFIG.playerMinZ, CONFIG.playerMaxZ)
-    };
+    return { ...player, x: clamp(x, -CONFIG.worldHalfWidth, CONFIG.worldHalfWidth), y: CONFIG.flightPlaneY, z: clamp(z, CONFIG.playerMinZ, CONFIG.playerMaxZ) };
   }
 
   function spheresHit(a, b, xy = CONFIG.collisionXY, zRange = CONFIG.collisionZ) {
@@ -86,7 +92,6 @@
     return Math.hypot(dx, dy) <= xy && Math.abs(a.z - b.z) <= zRange;
   }
 
-  // Ground targets are intentionally hit in the X/Z plane so forward lasers can destroy surface installations.
   function planarHit(a, b, xRange = 1.35, zRange = 3.0) {
     return Math.abs(a.x - b.x) <= xRange && Math.abs(a.z - b.z) <= zRange;
   }
@@ -103,162 +108,59 @@
 
   function makeEnemy(id, stageNumber = 1, rng = Math.random) {
     if (typeof stageNumber === 'function') { rng = stageNumber; stageNumber = 1; }
-    const stage = stageConfig(stageNumber);
-    const kindRoll = rng();
-    const patternRoll = rng();
+    const stage = stageConfig(stageNumber), kindRoll = rng(), patternRoll = rng();
     const kind = kindRoll > 0.78 ? 'dart' : kindRoll > 0.47 ? 'fighter' : 'interceptor';
     const patterns = ['weave', 'zigzag', 'sweep', 'hunter'];
     const pattern = patterns[Math.min(patterns.length - 1, Math.floor(patternRoll * patterns.length))];
-    return {
-      id,
-      kind,
-      pattern,
-      x: rand(-7.8, 7.8, rng),
-      y: CONFIG.flightPlaneY,
-      z: CONFIG.enemySpawnZ,
-      speed: rand(CONFIG.enemySpeedMin, CONFIG.enemySpeedMax, rng) * stage.speedMultiplier,
-      phase: rand(0, Math.PI * 2, rng),
-      alive: true,
-      stage: stage.number
-    };
+    return { id, kind, pattern, x: rand(-7.8, 7.8, rng), y: CONFIG.flightPlaneY, z: CONFIG.enemySpawnZ, speed: rand(CONFIG.enemySpeedMin, CONFIG.enemySpeedMax, rng) * stage.speedMultiplier, phase: rand(0, Math.PI * 2, rng), alive: true, stage: stage.number };
   }
 
   function moveEnemy(enemy, elapsed, dt, playerX = 0) {
-    let x = enemy.x;
-    const p = enemy.phase || 0;
+    let x = enemy.x; const p = enemy.phase || 0;
     switch (enemy.pattern) {
-      case 'zigzag':
-        x += (Math.sin(elapsed * 3.4 + p) >= 0 ? 1 : -1) * 2.7 * dt;
-        break;
-      case 'sweep':
-        x += Math.sin(elapsed * 1.45 + p) * 4.0 * dt;
-        break;
-      case 'hunter':
-        x += clamp(playerX - x, -1.8, 1.8) * 1.25 * dt + Math.sin(elapsed * 2.1 + p) * 0.9 * dt;
-        break;
-      default:
-        x += Math.sin(elapsed * 2.7 + p) * 2.25 * dt;
-        break;
+      case 'zigzag': x += (Math.sin(elapsed * 3.4 + p) >= 0 ? 1 : -1) * 2.7 * dt; break;
+      case 'sweep': x += Math.sin(elapsed * 1.45 + p) * 4.0 * dt; break;
+      case 'hunter': x += clamp(playerX - x, -1.8, 1.8) * 1.25 * dt + Math.sin(elapsed * 2.1 + p) * 0.9 * dt; break;
+      default: x += Math.sin(elapsed * 2.7 + p) * 2.25 * dt; break;
     }
-    return {
-      ...enemy,
-      x: clamp(x, -CONFIG.worldHalfWidth, CONFIG.worldHalfWidth),
-      y: CONFIG.flightPlaneY,
-      z: enemy.z - enemy.speed * dt
-    };
+    return { ...enemy, x: clamp(x, -CONFIG.worldHalfWidth, CONFIG.worldHalfWidth), y: CONFIG.flightPlaneY, z: enemy.z - enemy.speed * dt };
   }
 
   function makeGroundEnemy(id, stageNumber = 1, rng = Math.random) {
     if (typeof stageNumber === 'function') { rng = stageNumber; stageNumber = 1; }
-    const stage = stageConfig(stageNumber);
-    const hp = 1 + Math.floor(stage.number / 2);
-    return {
-      id,
-      kind: 'turret',
-      x: rand(-7.2, 7.2, rng),
-      y: CONFIG.groundPlaneY,
-      z: CONFIG.enemySpawnZ,
-      speed: CONFIG.groundScrollSpeed * stage.speedMultiplier,
-      hp,
-      maxHp: hp,
-      phase: rand(0, Math.PI * 2, rng),
-      alive: true,
-      stage: stage.number
-    };
+    const stage = stageConfig(stageNumber), hp = 1 + Math.floor(stage.number / 2);
+    return { id, kind: 'turret', x: rand(-7.2, 7.2, rng), y: CONFIG.groundPlaneY, z: CONFIG.enemySpawnZ, speed: CONFIG.groundScrollSpeed * stage.speedMultiplier, hp, maxHp: hp, phase: rand(0, Math.PI * 2, rng), alive: true, stage: stage.number };
   }
+  function moveGroundEnemy(enemy, dt) { return { ...enemy, y: CONFIG.groundPlaneY, z: enemy.z - enemy.speed * dt }; }
 
-  function moveGroundEnemy(enemy, dt) {
-    return { ...enemy, y: CONFIG.groundPlaneY, z: enemy.z - enemy.speed * dt };
-  }
-
-  // Indestructible rotating armor plate: an original obstacle archetype.
   function makeArmorPlate(id, stageNumber = 1, rng = Math.random) {
     if (typeof stageNumber === 'function') { rng = stageNumber; stageNumber = 1; }
     const stage = stageConfig(stageNumber);
-    return {
-      id,
-      kind: 'armorPlate',
-      x: rand(-7.4, 7.4, rng),
-      y: CONFIG.flightPlaneY,
-      z: CONFIG.enemySpawnZ,
-      speed: rand(9.0, 12.0, rng) * stage.speedMultiplier,
-      angle: rand(0, Math.PI * 2, rng),
-      spin: rand(2.2, 4.1, rng) * (rng() > 0.5 ? 1 : -1),
-      indestructible: true,
-      alive: true,
-      stage: stage.number
-    };
+    return { id, kind: 'armorPlate', x: rand(-7.4, 7.4, rng), y: CONFIG.flightPlaneY, z: CONFIG.enemySpawnZ, speed: rand(9.0, 12.0, rng) * stage.speedMultiplier, angle: rand(0, Math.PI * 2, rng), spin: rand(2.2, 4.1, rng) * (rng() > 0.5 ? 1 : -1), indestructible: true, alive: true, stage: stage.number };
   }
-
-  function moveArmorPlate(plate, dt) {
-    return {
-      ...plate,
-      y: CONFIG.flightPlaneY,
-      z: plate.z - plate.speed * dt,
-      angle: plate.angle + plate.spin * dt
-    };
-  }
+  function moveArmorPlate(plate, dt) { return { ...plate, y: CONFIG.flightPlaneY, z: plate.z - plate.speed * dt, angle: plate.angle + plate.spin * dt }; }
 
   function makeBoss(stageNumber = 1) {
     const stage = stageConfig(stageNumber);
-    return {
-      id: `boss-${stage.number}`,
-      kind: 'boss',
-      x: 0,
-      y: CONFIG.flightPlaneY,
-      z: 66,
-      hp: stage.bossHp,
-      maxHp: stage.bossHp,
-      alive: true,
-      stage: stage.number
-    };
+    return { id: `boss-${stage.number}`, kind: 'boss', x: 0, y: CONFIG.flightPlaneY, z: 66, hp: stage.bossHp, maxHp: stage.bossHp, alive: true, stage: stage.number };
   }
-
   function moveBoss(boss, elapsed) {
-    const stage = stageConfig(boss.stage || 1);
-    const intensity = 1 + (stage.number - 1) * 0.12;
-    return {
-      ...boss,
-      x: Math.sin(elapsed * 0.68) * 5.4 * intensity + Math.sin(elapsed * 1.93) * 1.15,
-      y: CONFIG.flightPlaneY,
-      z: 60 + Math.sin(elapsed * 0.47) * (5.5 + stage.number * 0.8)
-    };
+    const stage = stageConfig(boss.stage || 1), intensity = 1 + (stage.number - 1) * 0.12;
+    return { ...boss, x: Math.sin(elapsed * 0.68) * 5.4 * intensity + Math.sin(elapsed * 1.93) * 1.15, y: CONFIG.flightPlaneY, z: 60 + Math.sin(elapsed * 0.47) * (5.5 + stage.number * 0.8) };
   }
 
-  function shouldFire(ratePerSec, dt, rng = Math.random) {
-    return rng() < Math.max(0, ratePerSec) * Math.max(0, dt);
-  }
-
+  function shouldFire(ratePerSec, dt, rng = Math.random) { return rng() < Math.max(0, ratePerSec) * Math.max(0, dt); }
   function makeEnemyBullet(source, target, stageNumber = 1, speedScale = 1) {
-    const stage = stageConfig(stageNumber);
-    const dx = target.x - source.x, dy = target.y - source.y, dz = target.z - source.z;
-    const len = Math.max(0.001, Math.hypot(dx, dy, dz));
-    const speed = CONFIG.enemyBulletSpeed * stage.speedMultiplier * speedScale;
-    return {
-      x: source.x,
-      y: source.y,
-      z: source.z,
-      vx: dx / len * speed,
-      vy: dy / len * speed,
-      vz: dz / len * speed,
-      alive: true
-    };
+    const stage = stageConfig(stageNumber), dx = target.x - source.x, dy = target.y - source.y, dz = target.z - source.z;
+    const len = Math.max(0.001, Math.hypot(dx, dy, dz)), speed = CONFIG.enemyBulletSpeed * stage.speedMultiplier * speedScale;
+    return { x: source.x, y: source.y, z: source.z, vx: dx / len * speed, vy: dy / len * speed, vz: dz / len * speed, alive: true };
   }
-
-  function moveEnemyBullet(bullet, dt) {
-    return {
-      ...bullet,
-      x: bullet.x + bullet.vx * dt,
-      y: bullet.y + bullet.vy * dt,
-      z: bullet.z + bullet.vz * dt
-    };
-  }
+  function moveEnemyBullet(bullet, dt) { return { ...bullet, x: bullet.x + bullet.vx * dt, y: bullet.y + bullet.vy * dt, z: bullet.z + bullet.vz * dt }; }
 
   return {
-    VERSION, CONFIG, STAGES, clamp, rand, stageConfig, stagePhase, stageRemaining,
+    VERSION, CONFIG, STAGES, clamp, rand, stageConfig, stagePhase, stageRemaining, continueCampaign, nextLives,
     project3D, projectChase3D, movePlayer, spheresHit, planarHit,
-    scoreForEnemy, nextEnemySpawn, makeEnemy, moveEnemy,
-    makeGroundEnemy, moveGroundEnemy, makeArmorPlate, moveArmorPlate,
-    makeBoss, moveBoss, shouldFire, makeEnemyBullet, moveEnemyBullet
+    scoreForEnemy, nextEnemySpawn, makeEnemy, moveEnemy, makeGroundEnemy, moveGroundEnemy,
+    makeArmorPlate, moveArmorPlate, makeBoss, moveBoss, shouldFire, makeEnemyBullet, moveEnemyBullet
   };
 });
