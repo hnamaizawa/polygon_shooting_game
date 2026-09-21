@@ -49,6 +49,7 @@
   function stageConfig(stageNumber) { return STAGES[clamp(Math.floor(stageNumber || 1), 1, STAGES.length) - 1]; }
   function stagePhase(stageElapsed) { return stageElapsed >= CONFIG.bossIntroSec ? 'boss' : 'normal'; }
   function stageRemaining(stageElapsed) { return Math.max(0, CONFIG.stageDurationSec - stageElapsed); }
+  function shouldAdvanceStage(stageElapsed) { return stageElapsed >= CONFIG.stageDurationSec; }
 
   function continueCampaign(snapshot = {}) {
     return {
@@ -273,7 +274,7 @@
   }
 
   return {
-    VERSION, CONFIG, STAGES, clamp, rand, stageConfig, stagePhase, stageRemaining, continueCampaign, nextLives,
+    VERSION, CONFIG, STAGES, clamp, rand, stageConfig, stagePhase, stageRemaining, shouldAdvanceStage, continueCampaign, nextLives,
     project3D, projectChase3D, movePlayer, spheresHit, planarHit,
     scoreForEnemy, nextEnemySpawn, makeEnemy, moveEnemy,
     makeGroundEnemy, moveGroundEnemy, makeArmorPlate, moveArmorPlate,
