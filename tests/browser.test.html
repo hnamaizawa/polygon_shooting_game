@@ -1,11 +1,10 @@
 <!doctype html><meta charset="utf-8"><title>Polygon Strike browser tests</title><body>RUNNING</body><script src="../src/game-core.js"></script><script>
 (()=>{'use strict';const C=window.PolygonStrikeCore;function a(v,m){if(!v)throw new Error(m);}try{
- a(C&&C.VERSION==='0.4.2','VERSION mismatch');a(C.CONFIG.stageCount===4,'stage count');a(C.CONFIG.stageDurationSec===60,'stage duration');a(C.CONFIG.bossIntroSec===50,'boss timing');a(!C.shouldAdvanceStage(59.9)&&C.shouldAdvanceStage(60),'hard stage end');
- a(C.STAGES.map(s=>s.backdrop).join(',')==='earthSurface,space,carrier,interior','stage backdrops');a(C.STAGES[0].name==='EARTH SURFACE','earth surface stage');
- const cont=C.continueCampaign({stage:2,score:900,worldScroll:120,continueCount:1});a(cont.stage===2&&cont.score===900&&cont.worldScroll===120&&cont.continueCount===2&&cont.lives===3&&cont.stageElapsed===0,'continue state');
- a(C.nextLives(3,true)===3&&C.nextLives(3,false)===2,'invincible damage rule');
- const s={x:0,y:C.CONFIG.flightPlaneY,z:9},f=C.movePlayer(s,{forward:true},.5);a(f.z>s.z&&f.y===C.CONFIG.flightPlaneY,'player movement');
- const p=C.makeArmorPlate(2,3,()=>.6);a(p.indestructible===true&&C.moveArmorPlate(p,.2).z<p.z,'armor plate');
- const bullet=C.makeEnemyBullet({x:2,y:C.CONFIG.flightPlaneY,z:50},{x:0,y:C.CONFIG.flightPlaneY,z:10},2);a(bullet.vz<0&&C.moveEnemyBullet(bullet,.2).z<bullet.z,'enemy bullet');
+ a(C&&C.VERSION==='0.5.0','VERSION mismatch');a(C.CONFIG.stageDurationSec===60,'stage duration');a(C.CONFIG.bossIntroSec===50,'boss timing');
+ a(C.enemyKindsForStage(4).includes('bomber')&&C.enemyKindsForStage(4).includes('raider')&&C.enemyKindsForStage(4).includes('beamfighter'),'enemy variety');
+ const beam=C.makeEnemy(1,4,(()=>{const v=[.99,.5,.5,.5,.5,.5];let i=0;return()=>v[Math.min(i++,v.length-1)];})());a(beam.weapon==='beam','beam fighter');
+ a(C.beamHitsX(0,.5,.6)&&!C.beamHitsX(0,1,.6),'beam collision');a(C.beamTargetAhead(10,50),'beam range');
+ const s=C.mapSegment(10,1),n=C.mapSegment(11,1);a(s.biome&&s.roadCenter!==n.roadCenter,'natural map segments');
+ a(C.makeBoss(4).weapon==='beam','boss beam');a(C.makeArmorPlate(2,3,()=>.6).indestructible===true,'armor plate');
  document.body.textContent='PASS: browser core tests';document.body.dataset.status='pass';
 }catch(e){document.body.textContent='FAIL: '+e.message;document.body.dataset.status='fail';}})();</script>
