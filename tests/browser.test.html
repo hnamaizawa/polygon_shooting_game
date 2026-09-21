@@ -1,6 +1,6 @@
 <!doctype html><meta charset="utf-8"><title>Polygon Strike browser tests</title><body>RUNNING</body><script src="../src/game-core.js"></script><script>
 (()=>{'use strict';const C=window.PolygonStrikeCore;function a(v,m){if(!v)throw new Error(m);}try{
- a(C&&C.VERSION==='0.4.2','VERSION mismatch');a(C.CONFIG.stageCount===4,'stage count');a(C.CONFIG.stageDurationSec===60,'stage duration');a(C.CONFIG.bossIntroSec===50,'boss timing');
+ a(C&&C.VERSION==='0.4.2','VERSION mismatch');a(C.CONFIG.stageCount===4,'stage count');a(C.CONFIG.stageDurationSec===60,'stage duration');a(C.CONFIG.bossIntroSec===50,'boss timing');a(!C.shouldAdvanceStage(59.9)&&C.shouldAdvanceStage(60),'hard stage end');
  a(C.STAGES.map(s=>s.backdrop).join(',')==='earthSurface,space,carrier,interior','stage backdrops');a(C.STAGES[0].name==='EARTH SURFACE','earth surface stage');
  const cont=C.continueCampaign({stage:2,score:900,worldScroll:120,continueCount:1});a(cont.stage===2&&cont.score===900&&cont.worldScroll===120&&cont.continueCount===2&&cont.lives===3&&cont.stageElapsed===0,'continue state');
  a(C.nextLives(3,true)===3&&C.nextLives(3,false)===2,'invincible damage rule');
