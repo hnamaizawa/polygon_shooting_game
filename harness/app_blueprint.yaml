@@ -14,3 +14,4 @@ non_negotiable_invariants:
   - "Craft silhouettes may evoke 1980s polygon shooters but must not copy proprietary models, textures, UI assets, or other protected game assets"
   - "Core math remains independently testable with Node.js"
   - "check_harness.cmd must provide baseline validation on Windows even when Node.js is not installed"
+  - "When Node.js is unavailable but Edge or Chrome is installed, check_harness.cmd must execute browser-based JavaScript core tests instead of warning-only fallback"
