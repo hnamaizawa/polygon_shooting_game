@@ -16,6 +16,7 @@ findstr /C:"const VERSION = '0.4.2'" "src\game-core.js" >nul || exit /b 1
 findstr /C:"stageDurationSec: 60" "src\game-core.js" >nul || exit /b 1
 findstr /C:"bossIntroSec: 50" "src\game-core.js" >nul || exit /b 1
 findstr /C:"EARTH SURFACE" "src\game-core.js" >nul || exit /b 1
+findstr /C:"function shouldAdvanceStage" "src\game-core.js" >nul || exit /b 1
 findstr /C:"function continueCampaign" "src\game-core.js" >nul || exit /b 1
 findstr /C:"function nextLives" "src\game-core.js" >nul || exit /b 1
 findstr /C:"e.code==='KeyI'" "src\game.js" >nul || exit /b 1
