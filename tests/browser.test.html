@@ -1,9 +1,10 @@
 <!doctype html><meta charset="utf-8"><title>Polygon Strike browser tests</title><body>RUNNING</body><script src="../src/game-core.js"></script><script>
 (()=>{'use strict';const C=window.PolygonStrikeCore;function a(v,m){if(!v)throw new Error(m);}try{
  a(C&&C.VERSION==='0.4.0','VERSION mismatch');a(C.CONFIG.stageCount===4,'stage count');a(C.CONFIG.stageDurationSec===300,'stage duration');a(C.CONFIG.bossIntroSec===270,'boss timing');
- a(C.STAGES.map(s=>s.backdrop).join(',')==='earth,space,carrier,interior','stage backdrops');a(C.stagePhase(270)==='boss','boss phase');
+ a(C.STAGES.map(s=>s.backdrop).join(',')==='earth,space,carrier,interior','stage backdrops');a(C.STAGES[3].armorChance>C.STAGES[0].armorChance,'armor scaling');a(C.stagePhase(270)==='boss','boss phase');
  const s={x:0,y:C.CONFIG.flightPlaneY,z:9},f=C.movePlayer(s,{forward:true},.5);a(f.z>s.z&&f.y===C.CONFIG.flightPlaneY,'player depth movement');
  const g=C.makeGroundEnemy(1,2,()=>.5);a(g.kind==='turret'&&g.y===C.CONFIG.groundPlaneY,'ground enemy');a(C.planarHit({x:0,z:10},{x:.5,z:11},1,2),'ground hit');
+ const p=C.makeArmorPlate(9,3,()=>.6);a(p.kind==='armorPlate'&&p.indestructible===true,'armor plate');const pm=C.moveArmorPlate(p,.5);a(pm.z<p.z&&pm.angle!==p.angle,'armor plate motion');
  const b=C.makeBoss(4);a(b.hp>C.makeBoss(1).hp,'boss scaling');a(C.moveBoss(b,2).y===C.CONFIG.flightPlaneY,'boss plane');
  const e=C.makeEnemy(2,4,()=>.6),m=C.moveEnemy({...e,pattern:'zigzag'},1,.25,0);a(m.z<e.z,'enemy movement');
  document.body.textContent='PASS: browser core tests';document.body.dataset.status='pass';
