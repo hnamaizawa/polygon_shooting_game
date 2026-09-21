@@ -1,5 +1,5 @@
 project: polygon-strike
-version: 0.5.0
+version: 0.5.1
 non_negotiable_invariants:
   - "Browser-only prototype: no backend required"
   - "Campaign contains exactly four stages and each stage lasts exactly 60 seconds"
@@ -7,13 +7,15 @@ non_negotiable_invariants:
   - "Stage 1 is EARTH SURFACE and all stage backgrounds scroll continuously without resetting worldScroll"
   - "Background composition uses deterministic varied map segments rather than one repeating strip"
   - "Earth surface map includes changing terrain biomes, a curving road, a varying river, and landmarks"
-  - "Space, flagship exterior, and flagship interior also vary structural/background segments over distance"
+  - "Stage 2 through 4 backgrounds include richer depth cues such as planets/nebulae, layered flagship hull structures, and enclosed corridor ceiling/wall details"
   - "Air enemy roster includes interceptor, fighter, dart, raider, bomber, and beamfighter archetypes"
   - "Enemy archetypes have visibly different movement patterns including hunter, weave, dash, cross, orbit, and stalk"
-  - "Player keeps pulse fire on Space/J and gains a continuous laser weapon on L"
+  - "Player keeps pulse fire on Space/J; holding L charges the player laser before a fixed-duration firing window"
+  - "Player laser requires a full charge, fires for a bounded active duration, then requires recharging"
   - "Player laser deals repeated forward beam damage and is blocked by indestructible armor plates"
   - "Beamfighter, later-stage laser turrets, and bosses can use charge-then-fire beam weapons"
   - "Enemy laser uses a warning/charge phase before the damaging beam phase"
+  - "Each stage can expose one optional original GOLDEN SCOUT hidden character encounter; discovering it grants bonus score but is never required for progression"
   - "Indestructible rotating armor plates remain indestructible to pulse fire and laser fire"
   - "Ground enemies remain destroyable by player pulse fire using X/Z planar targeting"
   - "Invincibility remains toggleable with I and continue remains available with C after game over"
