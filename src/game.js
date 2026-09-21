@@ -3,7 +3,7 @@
 
   const C = window.PolygonStrikeCore;
   const A = window.PolygonStrikeAudio || {
-    start(){}, playLaser(){}, playExplosion(){}, playHit(){}, playBoss(){}, playStageClear(){}, playGameOver(){},
+    start(){}, playLaser(){}, playExplosion(){}, playHit(){}, playArmorPing(){}, playBoss(){}, playStageClear(){}, playGameOver(){},
     toggleMute(){ return false; }, isMuted(){ return false; }, supported(){ return false; }
   };
 
@@ -53,7 +53,8 @@
     turret: makeGlossMetalTexture('#596775','#e7a74b','#171e26','#f2fbff'),
     boss: makeGlossMetalTexture('#687987','#ff3547','#121820','#ffffff'),
     carrier: makeGlossMetalTexture('#566473','#7aa7c4','#171e26','#ecf8ff'),
-    interior: makeGlossMetalTexture('#485563','#d84f54','#11161c','#edf8ff')
+    interior: makeGlossMetalTexture('#485563','#d84f54','#11161c','#edf8ff'),
+    armor: makeGlossMetalTexture('#8d98a3','#f3fbff','#202830','#ffffff')
   };
   const UV=[[.50,.02],[.02,.98],[.98,.98]];
   const QUV=[[0,0],[1,0],[1,1],[0,1]];
@@ -86,7 +87,7 @@
       running:true,gameOver:false,victory:false,score:0,lives:3,elapsed:0,stage:1,stageElapsed:0,
       spawnTimer:.35,enemyId:1,fireTimer:0,hitCooldown:0,shake:0,boss:null,bossSpawned:false,stageClearTimer:0,bannerTimer:3,
       player:{x:0,y:C.CONFIG.flightPlaneY,z:C.CONFIG.playerZ},
-      enemies:[],groundEnemies:[],lasers:[],particles:[],stars:Array.from({length:120},()=>makeStar(true))
+      enemies:[],groundEnemies:[],armorPlates:[],lasers:[],particles:[],stars:Array.from({length:120},()=>makeStar(true))
     };
   }
   function makeStar(randomZ=false){return{x:C.rand(-25,25),y:C.rand(-18,18),z:randomZ?C.rand(7,118):118,speed:C.rand(14,30),b:C.rand(.26,.9)};}
@@ -104,7 +105,9 @@
   function spawnWave(){
     const stage=currentStage();
     if(C.stagePhase(state.stageElapsed)==='boss')return;
-    if(Math.random()<stage.groundChance)state.groundEnemies.push(C.makeGroundEnemy(state.enemyId++,state.stage));
+    const roll=Math.random();
+    if(roll<stage.armorChance)state.armorPlates.push(C.makeArmorPlate(state.enemyId++,state.stage));
+    else if(roll<stage.armorChance+stage.groundChance)state.groundEnemies.push(C.makeGroundEnemy(state.enemyId++,state.stage));
     else state.enemies.push(C.makeEnemy(state.enemyId++,state.stage));
     state.spawnTimer=C.nextEnemySpawn(stage.spawnBase);
   }
@@ -115,7 +118,7 @@
   function advanceStage(){
     if(state.stage>=C.CONFIG.stageCount){finishGame();return;}
     state.stage++;state.stageElapsed=0;state.spawnTimer=.55;state.boss=null;state.bossSpawned=false;state.stageClearTimer=0;state.bannerTimer=3;
-    state.enemies=[];state.groundEnemies=[];state.lasers=[];
+    state.enemies=[];state.groundEnemies=[];state.armorPlates=[];state.lasers=[];
     A.playStageClear();
   }
   function finishGame(){
@@ -167,6 +170,22 @@
       if(g.alive&&g.z<C.CONFIG.enemyDespawnZ)g.alive=false;
     }
     state.groundEnemies=state.groundEnemies.filter(e=>e.alive);
+
+    state.armorPlates=state.armorPlates.map(p=>C.moveArmorPlate(p,dt));
+    for(const plate of state.armorPlates){
+      plate.flash=Math.max(0,(plate.flash||0)-dt);
+      for(const l of state.lasers){
+        if(plate.alive&&l.z<900&&C.spheresHit(plate,l,2.1,2.6)){
+          l.z=999;plate.flash=.12;burst(l.x,plate.y,plate.z,5);A.playArmorPing();
+        }
+      }
+      if(plate.alive&&state.hitCooldown<=0&&C.spheresHit(plate,state.player,2.35,3.8)){
+        state.lives--;state.hitCooldown=1.1;state.shake=1.15;A.playHit();burst(state.player.x,state.player.y,state.player.z+1,18);
+        if(state.lives<=0)endGame();
+      }
+      if(plate.z<C.CONFIG.enemyDespawnZ)plate.alive=false;
+    }
+    state.armorPlates=state.armorPlates.filter(p=>p.alive);
 
     if(state.boss?.alive){
       state.boss=C.moveBoss(state.boss,state.stageElapsed-C.CONFIG.bossIntroSec);
@@ -249,6 +268,17 @@
     else drawInterior();
   }
 
+  function drawArmorPlate(plate){
+    const w=2.15,h=1.35,t=.18,c=Math.cos(plate.angle),sn=Math.sin(plate.angle);
+    const pt=(x,y,z=0)=>[plate.x+x*c+z*sn,plate.y+y,plate.z-x*sn+z*c];
+    const front=[pt(-w,-h,-t),pt(w,-h,-t),pt(w,h,-t),pt(-w,h,-t)];
+    const back=[pt(w,-h,t),pt(-w,-h,t),pt(-w,h,t),pt(w,h,t)];
+    drawWorldTexturedQuad(front,textures.armor,plate.flash>0?0:.04,plate.flash>0?.82:.58);
+    drawWorldTexturedQuad(back,textures.armor,.18,.32);
+    drawLine3D(pt(-w,0,-t-.02),pt(w,0,-t-.02),plate.flash>0?'#ffffff':'rgba(240,250,255,.78)',1.4);
+    drawLine3D(pt(0,-h,-t-.02),pt(0,h,-t-.02),'rgba(225,240,250,.60)',1.1);
+  }
+
   function render(){ctx.save();const shakeX=state?.shake?C.rand(-4,4)*state.shake:0,shakeY=state?.shake?C.rand(-4,4)*state.shake:0;ctx.translate(shakeX,shakeY);ctx.fillStyle='#000';ctx.fillRect(-8,-8,W+16,H+16);drawPlayfield();drawHUD();ctx.restore();}
   function drawPlayfield(){
     ctx.save();ctx.beginPath();ctx.rect(0,0,PLAY_W,H);ctx.clip();if(!state){drawIdleStars();ctx.restore();return;}
@@ -256,6 +286,7 @@
     drawStageBackdrop();
     drawRetroGrid();
     for(const g of [...state.groundEnemies].sort((a,b)=>b.z-a.z))drawMesh(turretModel,g,1.05,textures.turret,.38);
+    for(const plate of [...state.armorPlates].sort((a,b)=>b.z-a.z))drawArmorPlate(plate);
     for(const l of state.lasers){const a=projectWorld(l.x,l.y,l.z),b=projectWorld(l.x,l.y,l.z+6);ctx.strokeStyle='#ff665d';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
     [...state.enemies].sort((a,b)=>b.z-a.z).forEach(e=>drawMesh(e.kind==='dart'?dartModel:fighterModel,e,e.kind==='dart'?1.25:1.4,e.kind==='dart'?textures.dart:textures.fighter));
     if(state.boss?.alive)drawMesh(bossModel,state.boss,1.55,textures.boss,.48);
@@ -274,7 +305,7 @@
     ctx.fillStyle='#e9edf3';ctx.textAlign='center';ctx.font='bold 18px monospace';ctx.fillText('SCORE',860,42);ctx.font='bold 26px monospace';ctx.fillStyle='#ff5555';ctx.fillText(String(state?.score||0).padStart(7,'0'),860,70);
     box(785,94,150,72);ctx.fillStyle='#fff';ctx.font='bold 18px monospace';ctx.fillText('WEAPON',860,120);ctx.font='bold 30px monospace';ctx.fillText('L',860,153);
     box(785,182,150,154);ctx.font='bold 16px monospace';ctx.fillText('SHIP STATUS',860,208);drawHudShip(860,266);ctx.fillStyle='#ff5555';ctx.fillText(`LIFE ${state?.lives??3}`,860,319);
-    box(785,352,150,118);ctx.fillStyle='#fff';ctx.font='bold 15px monospace';ctx.fillText(`STAGE ${state?.stage||1}/4`,860,379);ctx.font='bold 12px monospace';ctx.fillStyle='#9fd7ff';ctx.fillText(currentStage().name,860,401);ctx.fillStyle='#fff';ctx.fillText(C.stagePhase(state?.stageElapsed||0)==='boss'?'BOSS':formatTime(C.stageRemaining(state?.stageElapsed||0)),860,430);ctx.fillStyle='#ffb05f';ctx.fillText(`AIR ${state?.enemies?.length||0}  GND ${state?.groundEnemies?.length||0}`,860,454);
+    box(785,352,150,118);ctx.fillStyle='#fff';ctx.font='bold 15px monospace';ctx.fillText(`STAGE ${state?.stage||1}/4`,860,379);ctx.font='bold 12px monospace';ctx.fillStyle='#9fd7ff';ctx.fillText(currentStage().name,860,401);ctx.fillStyle='#fff';ctx.fillText(C.stagePhase(state?.stageElapsed||0)==='boss'?'BOSS':formatTime(C.stageRemaining(state?.stageElapsed||0)),860,430);ctx.fillStyle='#ffb05f';ctx.fillText(`AIR ${state?.enemies?.length||0} GND ${state?.groundEnemies?.length||0} OBS ${state?.armorPlates?.length||0}`,860,454);
     box(785,486,150,64);ctx.fillStyle='#fff';ctx.font='bold 14px monospace';ctx.fillText('THRUST',860,510);ctx.font='bold 18px monospace';ctx.fillStyle='#8bd7ff';ctx.fillText(`Z ${Math.round(state?.player?.z??C.CONFIG.playerZ).toString().padStart(2,'0')}`,860,537);
     ctx.fillStyle='#8f99a8';ctx.font='12px monospace';ctx.fillText(`POLYGON STRIKE ${C.VERSION}`,860,586);ctx.fillText(A.supported()?`SOUND ${A.isMuted()?'OFF':'ON'} [M]`:'SOUND N/A',860,604);ctx.fillText('4 STAGE CAMPAIGN',860,622);
   }
