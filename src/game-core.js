@@ -5,7 +5,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.5.0';
+  const VERSION = '0.5.1';
   const CONFIG = Object.freeze({
     worldHalfWidth: 9.2,
     worldHalfHeight: 6.0,
@@ -28,6 +28,8 @@
     playerBeamRange: 112,
     playerBeamWidth: 0.78,
     playerBeamDamageInterval: 0.13,
+    playerBeamChargeSec: 1.35,
+    playerBeamActiveSec: 1.0,
     enemyBeamWidth: 0.72,
     enemyBeamChargeSec: 0.65,
     enemyBeamActiveSec: 0.48,
@@ -131,14 +133,17 @@
     const kinds = enemyKindsForStage(stage.number);
     const kindRoll = rng();
     const kind = kinds[Math.min(kinds.length - 1, Math.floor(kindRoll * kinds.length))];
-    const patternByKind = { interceptor:'hunter', fighter:'weave', dart:'dash', raider:'cross', bomber:'orbit', beamfighter:'stalk' };
+    const patternByKind = {
+      interceptor:'hunter', fighter:'weave', dart:'dash', raider:'cross', bomber:'orbit', beamfighter:'stalk'
+    };
     const hpByKind = { interceptor:1, fighter:1, dart:1, raider:1, bomber:3, beamfighter:2 };
     const speedScale = { interceptor:1.02, fighter:1.0, dart:1.28, raider:1.18, bomber:.76, beamfighter:.88 }[kind] || 1;
     let x = rand(-7.8, 7.8, rng);
     if (kind === 'raider') x = rng() > .5 ? -8.5 : 8.5;
     const hp = hpByKind[kind] || 1;
     return {
-      id, kind, pattern:patternByKind[kind], weapon:kind === 'beamfighter' ? 'beam' : 'bullet',
+      id, kind, pattern:patternByKind[kind],
+      weapon:kind === 'beamfighter' ? 'beam' : 'bullet',
       x, y:CONFIG.flightPlaneY, z:CONFIG.enemySpawnZ,
       speed:rand(CONFIG.enemySpeedMin, CONFIG.enemySpeedMax, rng) * stage.speedMultiplier * speedScale,
       phase:rand(0, Math.PI * 2, rng), hp, maxHp:hp, alive:true, stage:stage.number,
@@ -258,6 +263,59 @@
     return entity;
   }
 
+  function updatePlayerBeamCharge(state, held, dt) {
+    const next = {
+      charge: Math.max(0, Number(state?.charge || 0)),
+      active: Math.max(0, Number(state?.active || 0)),
+      justFired: false
+    };
+    if (next.active > 0) {
+      next.active = Math.max(0, next.active - dt);
+      next.charge = 0;
+      return next;
+    }
+    if (held) {
+      next.charge = Math.min(CONFIG.playerBeamChargeSec, next.charge + dt);
+      if (next.charge >= CONFIG.playerBeamChargeSec) {
+        next.charge = 0;
+        next.active = CONFIG.playerBeamActiveSec;
+        next.justFired = true;
+      }
+    } else {
+      next.charge = Math.max(0, next.charge - dt * .35);
+    }
+    return next;
+  }
+
+  function secretEncounter(stageNumber, stageElapsed) {
+    const stage = clamp(Math.floor(stageNumber || 1), 1, CONFIG.stageCount);
+    const start = 20 + stage * 3.5;
+    return stageElapsed >= start && stageElapsed < start + 7.5;
+  }
+
+  function makeSecretCharacter(stageNumber = 1) {
+    const stage = stageConfig(stageNumber);
+    const side = stage.number % 2 === 0 ? -1 : 1;
+    return {
+      id:`secret-${stage.number}`, kind:'goldenScout', x:side * 8.6, y:CONFIG.flightPlaneY - .2, z:72,
+      hp:1, maxHp:1, alive:true, stage:stage.number, age:0, ttl:7.2, side, hidden:true
+    };
+  }
+
+  function moveSecretCharacter(secret, dt) {
+    const age = Number(secret.age || 0) + dt;
+    const side = secret.side || 1;
+    return {
+      ...secret,
+      age,
+      x:side * (7.9 - Math.min(2.4, age * .42)) + Math.sin(age * 3.2) * .42,
+      y:CONFIG.flightPlaneY - .25 + Math.sin(age * 2.4) * .28,
+      z:secret.z - 4.2 * dt,
+      hidden: age < .7 || age > secret.ttl - .8,
+      alive:secret.alive && age < secret.ttl
+    };
+  }
+
   function hash01(n, salt = 0) {
     const x = Math.sin((n + 1) * 12.9898 + (salt + 1) * 78.233) * 43758.5453;
     return x - Math.floor(x);
@@ -285,6 +343,7 @@
     scoreForEnemy, nextEnemySpawn, enemyKindsForStage, makeEnemy, moveEnemy,
     makeGroundEnemy, moveGroundEnemy, makeArmorPlate, moveArmorPlate,
     makeBoss, moveBoss, shouldFire, makeEnemyBullet, moveEnemyBullet,
-    beamHitsX, beamTargetAhead, updateBeamWeapon, activateChargedBeam, hash01, mapSegment
+    beamHitsX, beamTargetAhead, updateBeamWeapon, activateChargedBeam, updatePlayerBeamCharge,
+    secretEncounter, makeSecretCharacter, moveSecretCharacter, hash01, mapSegment
   };
 });
