@@ -37,8 +37,11 @@ check_harness.cmd
 
 `check_harness.cmd` 自体の実行に Node.js は必須ではありません。
 
-- Node.js がない場合: 必須ファイル、ゲームバージョン、主要コア関数、テクスチャマッピング実装、ハーネスのガードレールを確認する baseline mode を実行します。
-- Node.js が PATH にある場合: baseline mode に加えて JavaScript 構文検査と `tests/core.test.js` の単体テストを実行する full mode になります。
+- Node.js が PATH にある場合: JavaScript 構文検査と `tests/core.test.js` を実行する Node.js full mode になります。
+- Node.js がない場合でも Edge / Chrome が見つかれば: ヘッドレスブラウザで `tests/browser.test.html` を実行する browser full mode になります。
+- Node.js も Edge / Chrome も検出できない場合のみ: 必須ファイル、ゲームバージョン、主要コア関数、テクスチャマッピング実装、ハーネスのガードレールを確認する baseline mode になります。
+
+通常の Windows 11 環境では Microsoft Edge が標準搭載されているため、Node.js を別途インストールしなくても browser full mode で JavaScript テストまで実行できる想定です。
 
 ## 開発方針
 
