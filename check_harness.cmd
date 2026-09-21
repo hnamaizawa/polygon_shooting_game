@@ -12,18 +12,18 @@ for %%F in (index.html style.css src\game.js src\game-core.js src\audio.js harne
 echo PASS: required files found.
 
 echo [2/3] Checking harness/source invariants...
-findstr /C:"const VERSION = '0.4.2'" "src\game-core.js" >nul || exit /b 1
+findstr /C:"const VERSION = '0.5.0'" "src\game-core.js" >nul || exit /b 1
 findstr /C:"stageDurationSec: 60" "src\game-core.js" >nul || exit /b 1
 findstr /C:"bossIntroSec: 50" "src\game-core.js" >nul || exit /b 1
-findstr /C:"EARTH SURFACE" "src\game-core.js" >nul || exit /b 1
-findstr /C:"function shouldAdvanceStage" "src\game-core.js" >nul || exit /b 1
-findstr /C:"function continueCampaign" "src\game-core.js" >nul || exit /b 1
-findstr /C:"function nextLives" "src\game-core.js" >nul || exit /b 1
-findstr /C:"e.code==='KeyI'" "src\game.js" >nul || exit /b 1
-findstr /C:"function continueGame" "src\game.js" >nul || exit /b 1
-findstr /C:"function drawEarthSurface" "src\game.js" >nul || exit /b 1
-findstr /C:"state.worldScroll+=C.CONFIG.backgroundScrollSpeed*dt" "src\game.js" >nul || exit /b 1
-findstr /C:"transitionFromBackdrop" "src\game.js" >nul || exit /b 1
+findstr /C:"function mapSegment" "src\game-core.js" >nul || exit /b 1
+findstr /C:"function beamHitsX" "src\game-core.js" >nul || exit /b 1
+findstr /C:"beamfighter" "src\game-core.js" >nul || exit /b 1
+findstr /C:"bomber" "src\game-core.js" >nul || exit /b 1
+findstr /C:"raider" "src\game-core.js" >nul || exit /b 1
+findstr /C:"keys.has('KeyL')" "src\game.js" >nul || exit /b 1
+findstr /C:"function drawPlayerBeam" "src\game.js" >nul || exit /b 1
+findstr /C:"function drawEnemyBeam" "src\game.js" >nul || exit /b 1
+findstr /C:"function segmentWindow" "src\game.js" >nul || exit /b 1
 findstr /C:"const FIXED_STEP=1/60" "src\game.js" >nul || exit /b 1
 findstr /C:"non_negotiable_invariants:" "harness\app_blueprint.yaml" >nul || exit /b 1
 echo PASS: baseline source/harness invariants.
