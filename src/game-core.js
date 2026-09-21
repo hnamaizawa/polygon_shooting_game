@@ -5,7 +5,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '0.4.0';
+  const VERSION = '0.4.1';
   const CONFIG = Object.freeze({
     worldHalfWidth: 9.2,
     worldHalfHeight: 6.0,
@@ -22,22 +22,23 @@
     enemySpeedMax: 15.5,
     groundScrollSpeed: 10.2,
     laserSpeed: 66,
-    fireCooldown: 0.16,
+    fireCooldown: 0.22,
+    enemyBulletSpeed: 28,
     collisionXY: 1.35,
     collisionZ: 3.2,
     cameraPitchDeg: 30,
     cameraFocal: 500,
     cameraBackOffset: 4.0,
-    stageDurationSec: 300,
-    bossIntroSec: 270,
+    stageDurationSec: 90,
+    bossIntroSec: 75,
     stageCount: 4
   });
 
   const STAGES = Object.freeze([
-    Object.freeze({ number:1, name:'EARTH ORBIT', backdrop:'earth', speedMultiplier:1.00, spawnBase:0.92, groundChance:0.22, armorChance:0.05, bossHp:40 }),
-    Object.freeze({ number:2, name:'DEEP SPACE', backdrop:'space', speedMultiplier:1.10, spawnBase:0.82, groundChance:0.26, armorChance:0.07, bossHp:55 }),
-    Object.freeze({ number:3, name:'ENEMY FLAGSHIP', backdrop:'carrier', speedMultiplier:1.20, spawnBase:0.72, groundChance:0.34, armorChance:0.09, bossHp:70 }),
-    Object.freeze({ number:4, name:'FLAGSHIP CORE', backdrop:'interior', speedMultiplier:1.32, spawnBase:0.62, groundChance:0.40, armorChance:0.12, bossHp:90 })
+    Object.freeze({ number:1, name:'EARTH ORBIT', backdrop:'earth', speedMultiplier:1.00, spawnBase:0.92, groundChance:0.22, armorChance:0.05, airFireRate:0.16, groundFireRate:0.09, bossFireRate:0.62, bossHp:40 }),
+    Object.freeze({ number:2, name:'DEEP SPACE', backdrop:'space', speedMultiplier:1.10, spawnBase:0.82, groundChance:0.26, armorChance:0.07, airFireRate:0.18, groundFireRate:0.10, bossFireRate:0.68, bossHp:55 }),
+    Object.freeze({ number:3, name:'ENEMY FLAGSHIP', backdrop:'carrier', speedMultiplier:1.20, spawnBase:0.72, groundChance:0.34, armorChance:0.09, airFireRate:0.20, groundFireRate:0.12, bossFireRate:0.74, bossHp:70 }),
+    Object.freeze({ number:4, name:'FLAGSHIP CORE', backdrop:'interior', speedMultiplier:1.32, spawnBase:0.62, groundChance:0.40, armorChance:0.12, airFireRate:0.22, groundFireRate:0.14, bossFireRate:0.82, bossHp:90 })
   ]);
 
   function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -224,10 +225,40 @@
     };
   }
 
+  function shouldFire(ratePerSec, dt, rng = Math.random) {
+    return rng() < Math.max(0, ratePerSec) * Math.max(0, dt);
+  }
+
+  function makeEnemyBullet(source, target, stageNumber = 1, speedScale = 1) {
+    const stage = stageConfig(stageNumber);
+    const dx = target.x - source.x, dy = target.y - source.y, dz = target.z - source.z;
+    const len = Math.max(0.001, Math.hypot(dx, dy, dz));
+    const speed = CONFIG.enemyBulletSpeed * stage.speedMultiplier * speedScale;
+    return {
+      x: source.x,
+      y: source.y,
+      z: source.z,
+      vx: dx / len * speed,
+      vy: dy / len * speed,
+      vz: dz / len * speed,
+      alive: true
+    };
+  }
+
+  function moveEnemyBullet(bullet, dt) {
+    return {
+      ...bullet,
+      x: bullet.x + bullet.vx * dt,
+      y: bullet.y + bullet.vy * dt,
+      z: bullet.z + bullet.vz * dt
+    };
+  }
+
   return {
     VERSION, CONFIG, STAGES, clamp, rand, stageConfig, stagePhase, stageRemaining,
     project3D, projectChase3D, movePlayer, spheresHit, planarHit,
     scoreForEnemy, nextEnemySpawn, makeEnemy, moveEnemy,
-    makeGroundEnemy, moveGroundEnemy, makeArmorPlate, moveArmorPlate, makeBoss, moveBoss
+    makeGroundEnemy, moveGroundEnemy, makeArmorPlate, moveArmorPlate,
+    makeBoss, moveBoss, shouldFire, makeEnemyBullet, moveEnemyBullet
   };
 });
