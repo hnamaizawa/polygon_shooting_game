@@ -33,7 +33,12 @@ Windows コマンドプロンプト / PowerShell で:
 check_harness.cmd
 ```
 
-Node.js が PATH にあれば、コアロジックの単体テストと必須ファイル検査を実行します。
+`check_harness.cmd` 自体の実行に Node.js は必須ではありません。
+
+- Node.js がない場合: 必須ファイル、ゲームバージョン、主要コア関数、ハーネスのガードレールを確認する baseline mode を実行します。
+- Node.js が PATH にある場合: baseline mode に加えて `tests/core.test.js` のJavaScript単体テストを実行する full mode になります。
+
+ゲーム本体の実行にも Node.js は不要です。Chrome / Edge だけでプレイできます。
 
 ## 開発方針
 
