@@ -61,7 +61,7 @@
       worldScroll:options.worldScroll||0, continueCount:options.continueCount||0,
       transitionFromBackdrop:null, transitionTimer:0,
       spawnTimer:.35, enemyId:1, fireTimer:0, hitCooldown:0, shake:0,
-      boss:null, bossSpawned:false, stageClearTimer:0, bannerTimer:3,
+      boss:null, bossSpawned:false, stageCleared:false, bannerTimer:3,
       player:{x:0,y:C.CONFIG.flightPlaneY,z:C.CONFIG.playerZ},
       enemies:[],groundEnemies:[],armorPlates:[],lasers:[],enemyBullets:[],particles:[],stars:Array.from({length:110},()=>makeStar(true))
     };
@@ -109,7 +109,7 @@
     state.stage++;
     state.transitionFromBackdrop=oldBackdrop;
     state.transitionTimer=C.CONFIG.backdropTransitionSec;
-    state.stageElapsed=0; state.spawnTimer=.55; state.boss=null; state.bossSpawned=false; state.stageClearTimer=0; state.bannerTimer=3;
+    state.stageElapsed=0; state.spawnTimer=.55; state.boss=null; state.bossSpawned=false; state.stageCleared=false; state.bannerTimer=3;
     state.enemies=[]; state.groundEnemies=[]; state.armorPlates=[]; state.lasers=[]; state.enemyBullets=[];
     A.playStageClear();
   }
@@ -182,10 +182,10 @@
     if(state.boss?.alive){
       state.boss=C.moveBoss(state.boss,state.stageElapsed-C.CONFIG.bossIntroSec);
       if(C.shouldFire(stage.bossFireRate,dt))spawnEnemyBullet({x:state.boss.x,y:state.boss.y,z:state.boss.z-2.5},1.08);
-      for(const l of state.lasers){if(l.z<900&&C.planarHit(state.boss,l,2.8,4.4)){l.z=999;state.boss.hp--;burst(l.x,C.CONFIG.flightPlaneY,state.boss.z,4);if(state.boss.hp<=0){state.boss.alive=false;state.score+=C.scoreForEnemy(state.boss);burst(state.boss.x,state.boss.y,state.boss.z,55);A.playExplosion();state.stageClearTimer=2.6;state.bannerTimer=2.6;}}}
+      for(const l of state.lasers){if(l.z<900&&C.planarHit(state.boss,l,2.8,4.4)){l.z=999;state.boss.hp--;burst(l.x,C.CONFIG.flightPlaneY,state.boss.z,4);if(state.boss.hp<=0){state.boss.alive=false;state.score+=C.scoreForEnemy(state.boss);burst(state.boss.x,state.boss.y,state.boss.z,55);A.playExplosion();state.stageCleared=true;state.bannerTimer=2.6;}}}
       if(state.boss.alive&&C.spheresHit(state.boss,state.player,3.5,5.2)){damagePlayer(1.5);state.player.z=C.CONFIG.playerMinZ;}
     }
-    if(state.stageClearTimer>0){state.stageClearTimer-=dt;if(state.stageClearTimer<=0)advanceStage();}
+    if(state.running&&C.shouldAdvanceStage(state.stageElapsed)){advanceStage();return;}
 
     state.enemyBullets=state.enemyBullets.map(b=>C.moveEnemyBullet(b,dt));
     for(const b of state.enemyBullets){if(b.alive&&C.spheresHit(b,state.player,1.05,1.8)){b.alive=false;damagePlayer(.8);}if(b.z<1||b.z>126||Math.abs(b.x)>14||b.y<-4||b.y>12)b.alive=false;}
@@ -258,7 +258,7 @@
   function drawRetroGrid(){const y=C.CONFIG.flightPlaneY+2.55;for(let z=12;z<=110;z+=8)drawLine3D([-11,y,z],[11,y,z],'rgba(115,160,200,.08)',1);for(let x=-10;x<=10;x+=2)drawLine3D([x,y,10],[x,y,112],'rgba(115,160,200,.05)',1);}
   function drawPlayer(){drawMesh(playerModel,state.player,1.18,textures.player);const la=projectWorld(state.player.x-.68,state.player.y+.12,state.player.z-1.65),lb=projectWorld(state.player.x-.68,state.player.y+.22,state.player.z-3.7),ra=projectWorld(state.player.x+.68,state.player.y+.12,state.player.z-1.65),rb=projectWorld(state.player.x+.68,state.player.y+.22,state.player.z-3.7);ctx.strokeStyle='#ff9c55';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(la.x,la.y);ctx.lineTo(lb.x,lb.y);ctx.moveTo(ra.x,ra.y);ctx.lineTo(rb.x,rb.y);ctx.stroke();if(invincibleMode){ctx.strokeStyle='rgba(120,230,255,.75)';ctx.lineWidth=2;ctx.beginPath();ctx.arc((la.x+ra.x)/2,(la.y+ra.y)/2,34+Math.sin(state.elapsed*6)*3,0,Math.PI*2);ctx.stroke();}}
   function drawBossBar(){if(!state.boss?.alive)return;const x=165,y=18,w=410,h=16,ratio=Math.max(0,state.boss.hp/state.boss.maxHp);ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(x-4,y-4,w+8,h+8);ctx.strokeStyle='#fff';ctx.strokeRect(x,y,w,h);ctx.fillStyle='#d42e38';ctx.fillRect(x+2,y+2,(w-4)*ratio,h-4);ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.fillText(`BOSS ${state.boss.hp}/${state.boss.maxHp}`,x+w/2,y+13);}
-  function drawBanner(){if(state.bannerTimer<=0)return;const stage=currentStage();ctx.textAlign='center';ctx.fillStyle='rgba(0,0,0,.64)';ctx.fillRect(115,260,510,76);ctx.fillStyle='#fff';ctx.font='bold 25px monospace';let text=`STAGE ${state.stage}  ${stage.name}`;if(state.bossSpawned&&state.boss?.alive)text='WARNING  BOSS APPROACH';else if(state.stageClearTimer>0)text='STAGE CLEAR';ctx.fillText(text,370,305);}
+  function drawBanner(){if(state.bannerTimer<=0)return;const stage=currentStage();ctx.textAlign='center';ctx.fillStyle='rgba(0,0,0,.64)';ctx.fillRect(115,260,510,76);ctx.fillStyle='#fff';ctx.font='bold 25px monospace';let text=`STAGE ${state.stage}  ${stage.name}`;if(state.bossSpawned&&state.boss?.alive)text='WARNING  BOSS APPROACH';else if(state.stageCleared)text='STAGE CLEAR';ctx.fillText(text,370,305);}
   function formatTime(sec){const s=Math.max(0,Math.floor(sec)),m=Math.floor(s/60),r=s%60;return `${m}:${String(r).padStart(2,'0')}`;}
   function drawHUD(){
     ctx.fillStyle='#05070a';ctx.fillRect(HUD_X,0,W-HUD_X,H);ctx.strokeStyle='#c4c9d0';ctx.lineWidth=2;ctx.strokeRect(HUD_X+10,10,W-HUD_X-20,H-20);
