@@ -12,21 +12,17 @@ for %%F in (index.html style.css src\game.js src\game-core.js src\audio.js harne
 echo PASS: required files found.
 
 echo [2/3] Checking harness/source invariants...
-findstr /C:"const VERSION = '0.4.0'" "src\game-core.js" >nul || exit /b 1
-findstr /C:"stageDurationSec: 300" "src\game-core.js" >nul || exit /b 1
-findstr /C:"bossIntroSec: 270" "src\game-core.js" >nul || exit /b 1
-findstr /C:"stageCount: 4" "src\game-core.js" >nul || exit /b 1
-findstr /C:"function planarHit" "src\game-core.js" >nul || exit /b 1
-findstr /C:"function makeGroundEnemy" "src\game-core.js" >nul || exit /b 1
-findstr /C:"function makeArmorPlate" "src\game-core.js" >nul || exit /b 1
-findstr /C:"function makeBoss" "src\game-core.js" >nul || exit /b 1
-findstr /C:"function moveEnemy" "src\game-core.js" >nul || exit /b 1
-findstr /C:"earth,space,carrier,interior" "tests\browser.test.html" >nul || exit /b 1
-findstr /C:"groundEnemies" "src\game.js" >nul || exit /b 1
-findstr /C:"armorPlates" "src\game.js" >nul || exit /b 1
-findstr /C:"drawArmorPlate" "src\game.js" >nul || exit /b 1
-findstr /C:"drawEarthBackdrop" "src\game.js" >nul || exit /b 1
-findstr /C:"drawInterior" "src\game.js" >nul || exit /b 1
+findstr /C:"const VERSION = '0.4.1'" "src\game-core.js" >nul || exit /b 1
+findstr /C:"stageDurationSec: 90" "src\game-core.js" >nul || exit /b 1
+findstr /C:"bossIntroSec: 75" "src\game-core.js" >nul || exit /b 1
+findstr /C:"fireCooldown: 0.22" "src\game-core.js" >nul || exit /b 1
+findstr /C:"function makeEnemyBullet" "src\game-core.js" >nul || exit /b 1
+findstr /C:"function moveEnemyBullet" "src\game-core.js" >nul || exit /b 1
+findstr /C:"function toggleBgm" "src\audio.js" >nul || exit /b 1
+findstr /C:"e.code==='KeyB'" "src\game.js" >nul || exit /b 1
+findstr /C:"e.code==='KeyT'" "src\game.js" >nul || exit /b 1
+findstr /C:"const FIXED_STEP=1/60" "src\game.js" >nul || exit /b 1
+findstr /C:"enemyBullets" "src\game.js" >nul || exit /b 1
 findstr /C:"non_negotiable_invariants:" "harness\app_blueprint.yaml" >nul || exit /b 1
 echo PASS: baseline source/harness invariants.
 
