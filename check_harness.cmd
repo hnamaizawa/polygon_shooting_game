@@ -12,51 +12,19 @@ for %%F in (index.html style.css src\game.js src\game-core.js src\audio.js harne
 echo PASS: required files found.
 
 echo [2/3] Checking harness/source invariants...
-findstr /C:"const VERSION = '0.3.1'" "src\game-core.js" >nul
-if errorlevel 1 (
-  echo [ERROR] Expected game version was not found in src\game-core.js.
-  exit /b 1
-)
-findstr /C:"flightPlaneY: 3.25" "src\game-core.js" >nul
-if errorlevel 1 (
-  echo [ERROR] Shared flight plane configuration was not found.
-  exit /b 1
-)
-findstr /C:"cameraPitchDeg: 30" "src\game-core.js" >nul
-if errorlevel 1 (
-  echo [ERROR] Elevated camera pitch configuration was not found.
-  exit /b 1
-)
-findstr /C:"cameraBackOffset: 4.0" "src\game-core.js" >nul
-if errorlevel 1 (
-  echo [ERROR] Rear camera offset configuration was not found.
-  exit /b 1
-)
-findstr /C:"function movePlayer" "src\game-core.js" >nul
-if errorlevel 1 exit /b 1
-findstr /C:"forward:keys.has('ArrowUp')" "src\game.js" >nul
-if errorlevel 1 exit /b 1
-findstr /C:"backward:keys.has('ArrowDown')" "src\game.js" >nul
-if errorlevel 1 exit /b 1
-findstr /C:"function makeGlossMetalTexture" "src\game.js" >nul
-if errorlevel 1 (
-  echo [ERROR] Gloss-metal texture generator was not found.
-  exit /b 1
-)
-findstr /C:"function drawWorldTexturedQuad" "src\game.js" >nul
-if errorlevel 1 (
-  echo [ERROR] Capital-ship texture mapping implementation was not found.
-  exit /b 1
-)
-findstr /C:"const melody = [" "src\audio.js" >nul
-if errorlevel 1 exit /b 1
-findstr /C:"bgmBus.gain.value = 0.34" "src\audio.js" >nul
-if errorlevel 1 (
-  echo [ERROR] Expected BGM level was not found.
-  exit /b 1
-)
-findstr /C:"non_negotiable_invariants:" "harness\app_blueprint.yaml" >nul
-if errorlevel 1 exit /b 1
+findstr /C:"const VERSION = '0.4.0'" "src\game-core.js" >nul || exit /b 1
+findstr /C:"stageDurationSec: 300" "src\game-core.js" >nul || exit /b 1
+findstr /C:"bossIntroSec: 270" "src\game-core.js" >nul || exit /b 1
+findstr /C:"stageCount: 4" "src\game-core.js" >nul || exit /b 1
+findstr /C:"function planarHit" "src\game-core.js" >nul || exit /b 1
+findstr /C:"function makeGroundEnemy" "src\game-core.js" >nul || exit /b 1
+findstr /C:"function makeBoss" "src\game-core.js" >nul || exit /b 1
+findstr /C:"function moveEnemy" "src\game-core.js" >nul || exit /b 1
+findstr /C:"earth,space,carrier,interior" "tests\browser.test.html" >nul || exit /b 1
+findstr /C:"groundEnemies" "src\game.js" >nul || exit /b 1
+findstr /C:"drawEarthBackdrop" "src\game.js" >nul || exit /b 1
+findstr /C:"drawInterior" "src\game.js" >nul || exit /b 1
+findstr /C:"non_negotiable_invariants:" "harness\app_blueprint.yaml" >nul || exit /b 1
 echo PASS: baseline source/harness invariants.
 
 echo [3/3] Running JavaScript tests...
@@ -83,14 +51,10 @@ exit /b 0
 
 :node_tests
 echo [INFO] Node.js detected. Running full JavaScript tests...
-node --check src\game-core.js
-if errorlevel 1 exit /b 1
-node --check src\audio.js
-if errorlevel 1 exit /b 1
-node --check src\game.js
-if errorlevel 1 exit /b 1
-node tests\core.test.js
-if errorlevel 1 exit /b 1
+node --check src\game-core.js || exit /b 1
+node --check src\audio.js || exit /b 1
+node --check src\game.js || exit /b 1
+node tests\core.test.js || exit /b 1
 echo PASS: harness checks complete ^(Node.js full mode^).
 exit /b 0
 
