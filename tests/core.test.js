@@ -9,6 +9,7 @@ assert.strictEqual(C.STAGES.length, 4);
 assert.deepStrictEqual(C.STAGES.map(s=>s.backdrop), ['earth','space','carrier','interior']);
 assert.ok(C.STAGES[3].speedMultiplier > C.STAGES[0].speedMultiplier);
 assert.ok(C.STAGES[3].bossHp > C.STAGES[0].bossHp);
+assert.ok(C.STAGES[3].armorChance > C.STAGES[0].armorChance);
 assert.strictEqual(C.stagePhase(269.9), 'normal');
 assert.strictEqual(C.stagePhase(270), 'boss');
 assert.strictEqual(C.stageRemaining(0), 300);
@@ -31,6 +32,14 @@ assert.strictEqual(ground.y,C.CONFIG.groundPlaneY);
 assert.ok(C.planarHit({x:0,z:10},{x:.8,z:12},1,3));
 assert.ok(!C.planarHit({x:0,z:10},{x:4,z:12},1,3));
 const groundMoved=C.moveGroundEnemy(ground,.5);assert.ok(groundMoved.z<ground.z);
+
+const plate=C.makeArmorPlate(9,3,()=>0.6);
+assert.strictEqual(plate.kind,'armorPlate');
+assert.strictEqual(plate.indestructible,true);
+assert.strictEqual(plate.y,C.CONFIG.flightPlaneY);
+const plateMoved=C.moveArmorPlate(plate,.5);
+assert.ok(plateMoved.z<plate.z,'armor plate should advance toward player');
+assert.notStrictEqual(plateMoved.angle,plate.angle,'armor plate should rotate');
 
 const boss1=C.makeBoss(1),boss4=C.makeBoss(4);
 assert.ok(boss4.hp>boss1.hp);assert.strictEqual(boss1.kind,'boss');
