@@ -127,6 +127,7 @@ internal static class EmbeddedGameAssets
         ("web.style.css", "style.css"),
         ("web.src.game-core.js", Path.Combine("src", "game-core.js")),
         ("web.src.v052-enhancements.js", Path.Combine("src", "v052-enhancements.js")),
+        ("web.src.release-version.js", Path.Combine("src", "release-version.js")),
         ("web.src.audio.js", Path.Combine("src", "audio.js")),
         ("web.src.game.js", Path.Combine("src", "game.js"))
     };
