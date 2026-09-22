@@ -1,9 +1,12 @@
 const assert = require('assert');
 const C = require('../src/game-core.js');
 const V052 = require('../src/v052-enhancements.js');
+const Release = require('../src/release-version.js');
 V052.install(C, {});
+Release.install(C, {});
 
-assert.strictEqual(C.VERSION, '0.5.2');
+assert.strictEqual(C.VERSION, '0.6.0');
+assert.strictEqual(Release.VERSION, '0.6.0');
 assert.strictEqual(C.CONFIG.stageCount, 8);
 assert.strictEqual(C.CONFIG.stagesPerLoop, 4);
 assert.strictEqual(C.CONFIG.campaignLoops, 2);

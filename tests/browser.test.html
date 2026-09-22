@@ -1,6 +1,6 @@
-<!doctype html><meta charset="utf-8"><title>Polygon Strike browser tests</title><body>RUNNING</body><script src="../src/game-core.js"></script><script src="../src/v052-enhancements.js"></script><script>
-(()=>{'use strict';const C=window.PolygonStrikeCore,V=window.PolygonStrikeV052;function a(v,m){if(!v)throw new Error(m);}try{
- a(C&&C.VERSION==='0.5.2','VERSION mismatch');a(C.CONFIG.stageDurationSec===60,'stage duration');a(C.CONFIG.bossIntroSec===50,'boss timing');
+<!doctype html><meta charset="utf-8"><title>Polygon Strike browser tests</title><body>RUNNING</body><script src="../src/game-core.js"></script><script src="../src/v052-enhancements.js"></script><script src="../src/release-version.js"></script><script>
+(()=>{'use strict';const C=window.PolygonStrikeCore,V=window.PolygonStrikeV052,R=window.PolygonStrikeRelease;function a(v,m){if(!v)throw new Error(m);}try{
+ a(C&&C.VERSION==='0.6.0'&&R.VERSION==='0.6.0','VERSION mismatch');a(C.CONFIG.stageDurationSec===60,'stage duration');a(C.CONFIG.bossIntroSec===50,'boss timing');
  a(C.CONFIG.stageCount===8&&C.CONFIG.campaignLoops===2,'two-loop campaign');a(V.baseStageNumber(5)===1&&V.campaignLoop(5)===2,'loop mapping');
  a(Math.abs(C.stageConfig(5).spawnBase-C.stageConfig(1).spawnBase/1.2)<1e-9,'loop2 enemy multiplier');a(C.makeBoss(5).hp===Math.ceil(C.makeBoss(1).hp*1.2),'loop2 boss hp');
  a(C.enemyKindsForStage(4).includes('bomber')&&C.enemyKindsForStage(4).includes('raider')&&C.enemyKindsForStage(4).includes('beamfighter'),'enemy variety');
