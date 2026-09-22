@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Drawing;
 using System.Reflection;
+using System.Windows.Forms;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
