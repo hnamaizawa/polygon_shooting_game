@@ -34,7 +34,7 @@ jobs:
         run: check_harness.cmd
 
       - name: Restore Windows wrapper
-        run: dotnet restore src/PolygonStrike.Windows/PolygonStrike.Windows.csproj
+        run: dotnet restore src/PolygonStrike.Windows/PolygonStrike.Windows.csproj --runtime win-x64
 
       - name: Publish single-file Windows x64 EXE
         run: >-
