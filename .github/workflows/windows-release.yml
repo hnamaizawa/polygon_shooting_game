@@ -50,14 +50,15 @@ jobs:
           -p:DebugType=None
           -p:DebugSymbols=false
 
-      - name: Verify single-file output and smoke test
+      - name: Verify single-file runtime payload and smoke test
         shell: pwsh
         run: |
           $files = @(Get-ChildItem "artifacts/win-x64" -File)
-          $exe = $files | Where-Object { $_.Name -eq "PolygonStrike.exe" } | Select-Object -First 1
-          if ($files.Count -ne 1 -or $null -eq $exe -or $exe.Length -le 0) {
-            $names = ($files | ForEach-Object Name) -join ", "
-            throw "Single-file publish must contain exactly one non-empty PolygonStrike.exe. Files: $names"
+          $runtimeFiles = @($files | Where-Object { $_.Extension -ne ".xml" })
+          $exe = $runtimeFiles | Where-Object { $_.Name -eq "PolygonStrike.exe" } | Select-Object -First 1
+          if ($runtimeFiles.Count -ne 1 -or $null -eq $exe -or $exe.Length -le 0) {
+            $names = ($runtimeFiles | ForEach-Object Name) -join ", "
+            throw "Single-file runtime payload must contain exactly one non-empty PolygonStrike.exe. Runtime files: $names"
           }
 
           $smoke = Start-Process -FilePath $exe.FullName -ArgumentList "--smoke-test" -PassThru -Wait
