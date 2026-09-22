@@ -1,11 +1,13 @@
-<!doctype html><meta charset="utf-8"><title>Polygon Strike browser tests</title><body>RUNNING</body><script src="../src/game-core.js"></script><script>
-(()=>{'use strict';const C=window.PolygonStrikeCore;function a(v,m){if(!v)throw new Error(m);}try{
- a(C&&C.VERSION==='0.5.1','VERSION mismatch');a(C.CONFIG.stageDurationSec===60,'stage duration');a(C.CONFIG.bossIntroSec===50,'boss timing');
+<!doctype html><meta charset="utf-8"><title>Polygon Strike browser tests</title><body>RUNNING</body><script src="../src/game-core.js"></script><script src="../src/v052-enhancements.js"></script><script>
+(()=>{'use strict';const C=window.PolygonStrikeCore,V=window.PolygonStrikeV052;function a(v,m){if(!v)throw new Error(m);}try{
+ a(C&&C.VERSION==='0.5.2','VERSION mismatch');a(C.CONFIG.stageDurationSec===60,'stage duration');a(C.CONFIG.bossIntroSec===50,'boss timing');
+ a(C.CONFIG.stageCount===8&&C.CONFIG.campaignLoops===2,'two-loop campaign');a(V.baseStageNumber(5)===1&&V.campaignLoop(5)===2,'loop mapping');
+ a(Math.abs(C.stageConfig(5).spawnBase-C.stageConfig(1).spawnBase/1.2)<1e-9,'loop2 enemy multiplier');a(C.makeBoss(5).hp===Math.ceil(C.makeBoss(1).hp*1.2),'loop2 boss hp');
  a(C.enemyKindsForStage(4).includes('bomber')&&C.enemyKindsForStage(4).includes('raider')&&C.enemyKindsForStage(4).includes('beamfighter'),'enemy variety');
  const beam=C.makeEnemy(1,4,(()=>{const v=[.99,.5,.5,.5,.5,.5];let i=0;return()=>v[Math.min(i++,v.length-1)];})());a(beam.weapon==='beam','beam fighter');
  a(C.beamHitsX(0,.5,.6)&&!C.beamHitsX(0,1,.6),'beam collision');a(C.beamTargetAhead(10,50),'beam range');
  let pb=C.updatePlayerBeamCharge({charge:0,active:0},true,C.CONFIG.playerBeamChargeSec+.01);a(pb.active>0&&pb.justFired,'charged player beam');
- a(C.secretEncounter(1,24)&&C.makeSecretCharacter(1).kind==='goldenScout','secret character');
+ a(C.secretEncounter(1,24)&&C.secretEncounter(5,24)&&C.makeSecretCharacter(1).kind==='goldenScout','secret character');
  const s=C.mapSegment(10,1),n=C.mapSegment(11,1);a(s.biome&&s.roadCenter!==n.roadCenter,'natural map segments');
  a(C.makeBoss(4).weapon==='beam','boss beam');a(C.makeArmorPlate(2,3,()=>.6).indestructible===true,'armor plate');
  document.body.textContent='PASS: browser core tests';document.body.dataset.status='pass';

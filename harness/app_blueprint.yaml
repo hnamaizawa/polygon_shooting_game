@@ -1,13 +1,17 @@
 project: polygon-strike
-version: 0.5.1
+version: 0.5.2
 non_negotiable_invariants:
   - "Browser-only prototype: no backend required"
-  - "Campaign contains exactly four stages and each stage lasts exactly 60 seconds"
+  - "Campaign contains exactly four distinct stages per loop, two loops total, and each stage lasts exactly 60 seconds"
+  - "Loop 1 keeps v0.5.1 difficulty; loop 2 maps back through the same four stages without changing their background identities"
+  - "Loop 2 enemy encounter density is approximately 1.2x loop 1 by reducing spawn delay, without globally increasing enemy movement speed"
+  - "Loop 2 boss maximum HP is exactly 1.2x the corresponding loop 1 boss HP, rounded up to a whole hit point"
   - "Boss phase begins near 50 seconds; stage progression occurs at 60 seconds even if the boss remains alive"
   - "Stage 1 is EARTH SURFACE and all stage backgrounds scroll continuously without resetting worldScroll"
   - "Background composition uses deterministic varied map segments rather than one repeating strip"
   - "Earth surface map includes changing terrain biomes, a curving road, a varying river, and landmarks"
   - "Stage 2 through 4 backgrounds include richer depth cues such as planets/nebulae, layered flagship hull structures, and enclosed corridor ceiling/wall details"
+  - "Rendered craft triangle faces receive additional facet subdivision lines so player, enemies, turrets, and bosses show visibly denser polygon detail"
   - "Air enemy roster includes interceptor, fighter, dart, raider, bomber, and beamfighter archetypes"
   - "Enemy archetypes have visibly different movement patterns including hunter, weave, dash, cross, orbit, and stalk"
   - "Player keeps pulse fire on Space/J; holding L charges the player laser before a fixed-duration firing window"
@@ -18,10 +22,10 @@ non_negotiable_invariants:
   - "Each stage can expose one optional original GOLDEN SCOUT hidden character encounter; discovering it grants bonus score but is never required for progression"
   - "Indestructible rotating armor plates remain indestructible to pulse fire and laser fire"
   - "Ground enemies remain destroyable by player pulse fire using X/Z planar targeting"
-  - "Invincibility remains toggleable with I and continue remains available with C after game over"
+  - "Invincibility remains toggleable with I and continue remains available with C after game over, including during loop 2"
   - "B toggles BGM independently; M remains master audio mute; T toggles texture mapping"
   - "Gameplay simulation remains fixed-step catch-up to reduce slow-motion during frame drops"
   - "Craft silhouettes and audiovisual assets remain original and must not copy proprietary game assets"
-  - "Core math, map generation, enemy movement, and beam rules remain independently testable with Node.js"
+  - "Core math, map generation, enemy movement, beam rules, and loop scaling remain independently testable with Node.js"
   - "check_harness.cmd must provide baseline validation on Windows even when Node.js is not installed"
   - "When Node.js is unavailable but Edge or Chrome is installed, check_harness.cmd must execute browser-based JavaScript core tests"

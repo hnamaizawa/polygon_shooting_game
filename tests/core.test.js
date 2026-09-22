@@ -1,8 +1,14 @@
 const assert = require('assert');
 const C = require('../src/game-core.js');
+const V052 = require('../src/v052-enhancements.js');
+V052.install(C, {});
 
-assert.strictEqual(C.VERSION, '0.5.1');
-assert.strictEqual(C.CONFIG.stageCount, 4);
+assert.strictEqual(C.VERSION, '0.5.2');
+assert.strictEqual(C.CONFIG.stageCount, 8);
+assert.strictEqual(C.CONFIG.stagesPerLoop, 4);
+assert.strictEqual(C.CONFIG.campaignLoops, 2);
+assert.strictEqual(C.CONFIG.loop2EnemyMultiplier, 1.2);
+assert.strictEqual(C.CONFIG.loop2BossHpMultiplier, 1.2);
 assert.strictEqual(C.CONFIG.stageDurationSec, 60);
 assert.strictEqual(C.CONFIG.bossIntroSec, 50);
 assert.strictEqual(C.CONFIG.defaultLives, 3);
@@ -17,8 +23,20 @@ assert.ok(C.STAGES[3].beamChance > C.STAGES[0].beamChance);
 assert.ok(!C.shouldAdvanceStage(59.99));
 assert.ok(C.shouldAdvanceStage(60));
 
+assert.strictEqual(V052.campaignLoop(4),1);
+assert.strictEqual(V052.campaignLoop(5),2);
+assert.strictEqual(V052.baseStageNumber(5),1);
+assert.strictEqual(V052.baseStageNumber(8),4);
+assert.strictEqual(C.stageConfig(5).name,C.stageConfig(1).name);
+assert.ok(Math.abs(C.stageConfig(5).spawnBase - C.stageConfig(1).spawnBase / 1.2) < 1e-9,'loop 2 must spawn about 1.2x as many enemies');
+const loop1Boss=C.makeBoss(1),loop2Boss=C.makeBoss(5);
+assert.strictEqual(loop2Boss.hp,Math.ceil(loop1Boss.hp*1.2),'loop 2 boss HP must be 1.2x');
+assert.strictEqual(C.makeBoss(8).hp,Math.ceil(C.makeBoss(4).hp*1.2));
+
 const continued=C.continueCampaign({stage:3,score:12345,worldScroll:987.5,continueCount:2});
 assert.deepStrictEqual(continued,{stage:3,score:12345,worldScroll:987.5,continueCount:3,lives:3,stageElapsed:0});
+const continuedLoop2=C.continueCampaign({stage:7,score:20000,worldScroll:1200,continueCount:0});
+assert.strictEqual(continuedLoop2.stage,7,'continue must preserve loop 2 campaign stage');
 assert.strictEqual(C.nextLives(3,true),3);
 assert.strictEqual(C.nextLives(3,false),2);
 
@@ -28,6 +46,7 @@ assert.ok(forward.z>start.z);assert.ok(backward.z<start.z);assert.strictEqual(fo
 
 const kinds=C.enemyKindsForStage(4);
 for(const kind of ['interceptor','fighter','dart','raider','bomber','beamfighter']) assert.ok(kinds.includes(kind),`missing ${kind}`);
+assert.deepStrictEqual(C.enemyKindsForStage(8),kinds,'loop 2 stage 4 must preserve the same enemy roster');
 function seq(values){let i=0;return()=>values[Math.min(i++,values.length-1)];}
 const bomber=C.makeEnemy(1,4,seq([.70,.5,.5,.5,.5,.5]));
 assert.strictEqual(bomber.kind,'bomber');assert.strictEqual(bomber.hp,3);assert.strictEqual(bomber.pattern,'orbit');
@@ -62,7 +81,6 @@ const boss=C.makeBoss(4);assert.strictEqual(boss.weapon,'beam');assert.ok(boss.h
 const bullet=C.makeEnemyBullet({x:5,y:C.CONFIG.flightPlaneY,z:60},{x:0,y:C.CONFIG.flightPlaneY,z:10},2);
 assert.ok(bullet.vz<0);assert.ok(C.moveEnemyBullet(bullet,.5).z<bullet.z);
 
-
 let playerBeam={charge:0,active:0};
 playerBeam=C.updatePlayerBeamCharge(playerBeam,true,C.CONFIG.playerBeamChargeSec-.05);
 assert.strictEqual(playerBeam.active,0,'player beam must not fire before full charge');
@@ -75,6 +93,7 @@ let partial=C.updatePlayerBeamCharge({charge:.8,active:0},false,.5);
 assert.ok(partial.charge<.8&&partial.charge>0,'released partial charge must decay gradually');
 
 assert.ok(C.secretEncounter(1,24),'stage 1 must have a secret encounter window');
+assert.ok(C.secretEncounter(5,24),'loop 2 stage 1 must keep the secret encounter');
 assert.ok(!C.secretEncounter(1,10),'secret must stay hidden outside its window');
 const secret=C.makeSecretCharacter(2);
 assert.strictEqual(secret.kind,'goldenScout');assert.ok(secret.hidden);
