@@ -19,6 +19,7 @@
     <EmbeddedResource Include="..\..\style.css" LogicalName="web.style.css" />
     <EmbeddedResource Include="..\game-core.js" LogicalName="web.src.game-core.js" />
     <EmbeddedResource Include="..\v052-enhancements.js" LogicalName="web.src.v052-enhancements.js" />
+    <EmbeddedResource Include="..\release-version.js" LogicalName="web.src.release-version.js" />
     <EmbeddedResource Include="..\audio.js" LogicalName="web.src.audio.js" />
     <EmbeddedResource Include="..\game.js" LogicalName="web.src.game.js" />
   </ItemGroup>
