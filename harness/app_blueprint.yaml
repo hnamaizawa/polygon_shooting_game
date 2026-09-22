@@ -1,7 +1,7 @@
 project: polygon-strike
-version: 0.5.2
+version: 0.6.0
 non_negotiable_invariants:
-  - "Browser-only prototype: no backend required"
+  - "Core gameplay remains browser-based and backend-free; the Windows EXE must host the same embedded HTML/CSS/JavaScript assets rather than maintain a separate game implementation"
   - "Campaign contains exactly four distinct stages per loop, two loops total, and each stage lasts exactly 60 seconds"
   - "Loop 1 keeps v0.5.1 difficulty; loop 2 maps back through the same four stages without changing their background identities"
   - "Loop 2 enemy encounter density is approximately 1.2x loop 1 by reducing spawn delay, without globally increasing enemy movement speed"
@@ -27,5 +27,11 @@ non_negotiable_invariants:
   - "Gameplay simulation remains fixed-step catch-up to reduce slow-motion during frame drops"
   - "Craft silhouettes and audiovisual assets remain original and must not copy proprietary game assets"
   - "Core math, map generation, enemy movement, beam rules, and loop scaling remain independently testable with Node.js"
+  - "The Windows wrapper uses .NET 8 WinForms plus Microsoft WebView2 and is published as a self-contained win-x64 single-file EXE"
+  - "The Windows wrapper must embed index.html, style.css, and the same JavaScript source files used by the browser build"
+  - "The packaged EXE must support --smoke-test to verify embedded assets and WebView2 runtime availability without opening the game window"
+  - "Pull requests must build and smoke-test the Windows EXE on a GitHub-hosted Windows runner before merge"
+  - "Every push to main must publish POLYGON-STRIKE-win-x64.exe in a GitHub Release marked Latest using a unique build tag"
+  - "The stable GitHub releases/latest/download/POLYGON-STRIKE-win-x64.exe path must continue to resolve to the newest main build"
   - "check_harness.cmd must provide baseline validation on Windows even when Node.js is not installed"
   - "When Node.js is unavailable but Edge or Chrome is installed, check_harness.cmd must execute browser-based JavaScript core tests"
