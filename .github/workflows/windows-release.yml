@@ -55,14 +55,14 @@ jobs:
         run: |
           $files = @(Get-ChildItem "artifacts/win-x64" -File)
           $exe = $files | Where-Object { $_.Name -eq "PolygonStrike.exe" } | Select-Object -First 1
-          if ($null -eq $exe -or $exe.Length -le 0) {
+          if ($files.Count -ne 1 -or $null -eq $exe -or $exe.Length -le 0) {
             $names = ($files | ForEach-Object Name) -join ", "
-            throw "PolygonStrike.exe was not produced. Files: $names"
+            throw "Single-file publish must contain exactly one non-empty PolygonStrike.exe. Files: $names"
           }
 
-          & $exe.FullName --smoke-test
-          if ($LASTEXITCODE -ne 0) {
-            throw "Packaged EXE smoke test failed with exit code $LASTEXITCODE."
+          $smoke = Start-Process -FilePath $exe.FullName -ArgumentList "--smoke-test" -PassThru -Wait
+          if ($smoke.ExitCode -ne 0) {
+            throw "Packaged EXE smoke test failed with exit code $($smoke.ExitCode)."
           }
 
           Copy-Item $exe.FullName "artifacts/POLYGON-STRIKE-win-x64.exe" -Force
